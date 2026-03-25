@@ -185,19 +185,28 @@ async function fazerUploadDrive(arquivo, nomeProjeto, fimProgresso) {
                     projectName: nomeProjeto
                 };
 
-                const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const response = await fetch(GAS_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify(payload) 
+                });
+                
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    document.getElementById('barra-progresso').style.width = `${fimProgresso}%`;
+                    const barra = document.getElementById('barra-progresso');
+                    if (barra) barra.style.width = `${fimProgresso}%`;
                     resolve(result);
                 } else {
                     reject(new Error(result.message));
                 }
-            } catch (err) { reject(err); }
+            } catch (err) { 
+                reject(err); 
+            }
         };
         reader.onerror = () => reject(new Error("Erro ao ler arquivo."));
-        reader.readAsAsDataURL(arquivo);
+        
+        // Linha corrigida abaixo:
+        reader.readAsDataURL(arquivo);
     });
 }
 
