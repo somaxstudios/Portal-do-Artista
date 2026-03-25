@@ -367,9 +367,9 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                     audio_data_conclusao: agora
                 }).eq('id', faixa.id);
             }
+        } // Fim do for de faixas
 
         // 5. Atualizar status geral do projeto (áudio) após todos os uploads
-        // Buscar todas as faixas novamente para verificar status consolidado
         const { data: faixasDoProjeto, error: buscaErr } = await supabase
             .from('faixas')
             .select('audio_status')
@@ -381,7 +381,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                                    statuses.some(s => s === 'EM_ANDAMENTO' || s === 'CONCLUIDO') ? 'EM_ANDAMENTO' :
                                    'AINDA_NAO_TEM';
 
-        // Atualizar projeto com o status consolidado de áudio
         const { error: updateErr } = await supabase
             .from('projetos')
             .update({ audio_status: audioStatusProjeto })
@@ -390,6 +389,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
 
         alert('Lançamento enviado com sucesso! 🎉');
         window.location.reload();
+
     } catch (err) {
         alert('Erro: ' + err.message);
         console.error(err);
