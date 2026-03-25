@@ -80,17 +80,15 @@ const btnAddProdutor = document.getElementById('btn-add-produtor');
 const containerMusicos = document.getElementById('container-musicos');
 const btnAddMusico = document.getElementById('btn-add-musico');
 
-// Mini-formulário de Participantes DENTRO da faixa (Autores, Interpretes, Feats)
 function criarParticipanteFaixa() {
     const div = document.createElement('div');
-    // Ajustado padding e gap para mobile
     div.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-3 bg-zinc-950/40 p-3 sm:p-2 rounded-lg border border-zinc-700/30 participante-faixa-item mt-2';
     div.innerHTML = `
         <div class="sm:col-span-4">
             <input type="text" required placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
         </div>
         <div class="sm:col-span-4">
-            <input type="text" required placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
+            <input type="text" placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
         </div>
         <div class="sm:col-span-3">
             <select class="input-papel-participante input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
@@ -106,10 +104,8 @@ function criarParticipanteFaixa() {
     return div;
 }
 
-// Criação do Card da Faixa
 function criarCardFaixa(index) {
     const div = document.createElement('div');
-    // Reduzido o padding no mobile (p-3) e maior no desktop (sm:p-5)
     div.className = 'p-3 sm:p-5 bg-zinc-900/50 border border-zinc-700/50 rounded-xl space-y-4 faixa-item relative';
     
     div.innerHTML = `
@@ -134,8 +130,7 @@ function criarCardFaixa(index) {
                 <label class="block text-[10px] sm:text-xs font-semibold text-zinc-300 uppercase">Autores, Intérpretes e Feats</label>
                 <button type="button" class="btn-add-participante-faixa text-[10px] bg-zinc-700 hover:bg-zinc-600 text-white px-2 py-1 rounded transition">+ Adicionar</button>
             </div>
-            <div class="container-participantes-faixa space-y-3 sm:space-y-2">
-                </div>
+            <div class="container-participantes-faixa space-y-3 sm:space-y-2"></div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -149,10 +144,7 @@ function criarCardFaixa(index) {
             </div>
         </div>
     `;
-
-    const containerParts = div.querySelector('.container-participantes-faixa');
-    containerParts.appendChild(criarParticipanteFaixa());
-
+    div.querySelector('.container-participantes-faixa').appendChild(criarParticipanteFaixa());
     return div;
 }
 
@@ -170,13 +162,10 @@ btnAddFaixa.addEventListener('click', () => {
     containerFaixas.appendChild(criarCardFaixa(containerFaixas.querySelectorAll('.faixa-item').length + 1));
 });
 
-
-// Músicos e Produtores (Gerais do Projeto)
 function criarCardPessoa(tipo) {
     const isProdutor = tipo === 'produtor';
     const placeholderPapel = isProdutor ? "Papel (Ex: Produtor, Mixagem)" : "Instrumento (Bateria, Baixo)";
     const div = document.createElement('div');
-    // Ajustado padding e grids para mobile
     div.className = `grid grid-cols-1 sm:grid-cols-12 gap-3 bg-zinc-900/30 p-4 sm:p-3 rounded-xl border border-zinc-800/50 ${tipo}-item`;
     
     div.innerHTML = `
@@ -184,7 +173,7 @@ function criarCardPessoa(tipo) {
             <input type="text" required placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
         </div>
         <div class="sm:col-span-4">
-            <input type="text" required placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
+            <input type="text" placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
         </div>
         <div class="sm:col-span-3">
             <input type="text" placeholder="${placeholderPapel}" class="input-papel-pessoa input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
@@ -222,13 +211,26 @@ formatoSelect.addEventListener('change', atualizarInterfaceFaixas);
 // ============================================================================
 // FUNÇÕES DE BANCO (SUPABASE) E GOOGLE DRIVE
 // ============================================================================
-async function obterOuCriarPessoa(nomeCompleto, nomeArtistico) {
-    if (!nomeCompleto || nomeCompleto.trim() === '') return null;
-    const { data: pessoaExistente } = await supabase.from('pessoas').select('id').eq('nome_completo', nomeCompleto.trim()).maybeSingle();
-    if (pessoaExistente) return pessoaExistente.id;
-    const { data: novaPessoa, error } = await supabase.from('pessoas').insert({ nome_completo: nomeCompleto.trim(), nome_artistico: nomeArtistico ? nomeArtistico.trim() : null }).select('id').single();
+async function obterOuCriarPessoa(dadosPessoa) {
+    const { nome_completo, nome_artistico } = dadosPessoa;
+
+    if (nome_completo && nome_completo.trim() !== '') {
+        const { data, error } = await supabase
+            .from('pessoas')
+            .select('id')
+            .eq('nome_completo', nome_completo.trim())
+            .maybeSingle();
+        if (error) throw error;
+        if (data) return data.id;
+    }
+
+    const { data, error } = await supabase.from('pessoas').insert({ 
+        nome_completo: nome_completo ? nome_completo.trim() : null, 
+        nome_artistico: nome_artistico ? nome_artistico.trim() : null 
+    }).select('id').single();
+    
     if (error) throw new Error("Erro ao criar pessoa: " + error.message);
-    return novaPessoa.id;
+    return data.id;
 }
 
 async function verificarProjetoDuplicado(nomeProjeto, artistaPrincipal) {
@@ -284,7 +286,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
 
     try {
         const jaExiste = await verificarProjetoDuplicado(nomeProjeto, artistaPrincipal);
-        if (jaExiste) throw new Error(`O projeto "${nomeProjeto}" do artista "${artistaPrincipal}" já existe no sistema.`);
+        if (jaExiste) throw new Error(`O projeto já existe no sistema.`);
 
         const arquivoCapa = document.getElementById('arquivo-capa').files[0];
         const faixas = document.querySelectorAll('.faixa-item');
@@ -297,45 +299,45 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         
         atualizarProgresso(10, 'Criando projeto...');
 
+        // === CORREÇÃO: COMBINAR GÊNERO E SUBGÊNERO ===
+        const generoInput = document.getElementById('genero-projeto').value.trim();
+        const subgeneroInput = document.getElementById('subgenero-projeto').value.trim();
+        const generoCombinado = (generoInput + (subgeneroInput ? ' / ' + subgeneroInput : '')).trim() || null;
+
+        const statusGeralVal = (arquivoCapa || temAlgumAudio) ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM';
+
+        // 1. SALVAR PROJETO
         const { data: projeto, error: erroProj } = await supabase.from('projetos').insert({
             nome_projeto: nomeProjeto,
             titulo: artistaPrincipal,
+            feat_projeto: document.getElementById('feat-projeto').value.trim() || null,
             formato: formatoSelect.value,
             spotify_id: document.getElementById('id-spotify').value.trim() || null,
             apple_music_id: document.getElementById('id-apple').value.trim() || null,
-            genero: document.getElementById('genero-projeto').value.trim() || null,
-            subgenero: document.getElementById('subgenero-projeto').value.trim() || null,
+            genero_subgenero: generoCombinado, // Correção do banco
             backup_url: document.getElementById('backup-url').value.trim() || null,
             release_texto: document.getElementById('release-projeto').value.trim() || null,
             data_lancamento: dataOculta.toISOString().split('T')[0],
             capa_status: arquivoCapa ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
             audio_status: temAlgumAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
+            status_geral: statusGeralVal,
             ja_lancado: false
         }).select('id').single();
 
         if (erroProj) throw erroProj;
         const projetoId = projeto.id;
 
-        const featProjeto = document.getElementById('feat-projeto').value.trim();
-        if (featProjeto && featProjeto.toLowerCase() !== 'nenhum') {
-            const listaFeats = featProjeto.split(',');
-            for (let f of listaFeats) {
-                if (f.trim()) {
-                    const pessoaId = await obterOuCriarPessoa(f.trim(), f.trim());
-                    await supabase.from('projeto_participantes').insert({ projeto_id: projetoId, faixa_id: null, pessoa_id: pessoaId, papel: 'FEAT' });
-                }
-            }
-        }
-
+        // 3. SALVAR PRODUTORES E MÚSICOS
         const equipe = [...document.querySelectorAll('.produtor-item'), ...document.querySelectorAll('.musico-item')];
         for (let membro of equipe) {
             const nc = membro.querySelector('.input-nome-completo').value.trim();
             const na = membro.querySelector('.input-nome-artistico').value.trim();
             const papelInput = membro.querySelector('.input-papel-pessoa').value.trim();
-            const tipoPapel = membro.classList.contains('produtor-item') ? 'PRODUTOR' : 'MUSICO';
+            const tipoPapel = membro.classList.contains('produtor-item') ? 'PRODUTOR_MUSICAL' : 'MUSICO'; // Correção
             
             if (nc) {
-                const pessoaId = await obterOuCriarPessoa(nc, na);
+                // Correção de Objeto
+                const pessoaId = await obterOuCriarPessoa({ nome_completo: nc, nome_artistico: na });
                 await supabase.from('projeto_participantes').insert({ projeto_id: projetoId, pessoa_id: pessoaId, papel: tipoPapel, instrumento: papelInput });
             }
         }
@@ -359,14 +361,14 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             const letra = f.querySelector('.input-letra-faixa').value.trim();
             const arquivoAudio = f.querySelector('.input-arquivo-faixa').files[0];
             
-            const { data: faixaSalva, error: erroFaixa } = await supabase.from('projeto_faixas').insert({
+            // Correção da tabela para 'faixas'
+            const { data: faixaSalva, error: erroFaixa } = await supabase.from('faixas').insert({
                 projeto_id: projetoId, 
                 numero_faixa: i + 1, 
                 titulo: titulo,
                 hook_tiktok: hook || null,
                 letra: letra || null,
-                audio_status: arquivoAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
-                data_upload_audio: arquivoAudio ? new Date().toISOString() : null
+                audio_status: arquivoAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM'
             }).select('id').single();
             
             if (erroFaixa) throw erroFaixa;
@@ -378,7 +380,8 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                 const papelSelecionado = pf.querySelector('.input-papel-participante').value;
                 
                 if (nc) {
-                    const pessoaId = await obterOuCriarPessoa(nc, na);
+                    // Correção de Objeto
+                    const pessoaId = await obterOuCriarPessoa({ nome_completo: nc, nome_artistico: na });
                     await supabase.from('projeto_participantes').insert({
                         projeto_id: projetoId, 
                         faixa_id: faixaSalva.id, 
@@ -401,7 +404,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         document.getElementById('barra-progresso').classList.replace('bg-indigo-500', 'bg-emerald-500');
         
         setTimeout(() => {
-            alert("Lançamento enviado com sucesso! Nosso time já recebeu seu material.");
+            alert("Lançamento enviado com sucesso!");
             window.location.reload();
         }, 2000);
 
