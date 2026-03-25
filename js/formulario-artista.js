@@ -1,36 +1,85 @@
 import { supabase } from './supabase-config.js';
 
-// === CONFIGURAÇÕES ===
+// ============================================================================
+// CONFIGURAÇÕES GERAIS
+// ============================================================================
+// COLOQUE O SEU CLIENT ID DO GOOGLE CLOUD AQUI (Gerado no painel do Google Cloud):
+const GOOGLE_CLIENT_ID = "5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com"; 
+
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwLfdrcRFo3kj5rDh2RF54p2wb6aus7t2NjcMU4Ie-CWXH0tTk1THgx-_RzGHCXCcN5/exec";
-const TAMANHO_PEDACO = 5 * 1024 * 1024; 
+const TAMANHO_PEDACO = 5 * 1024 * 1024; // 5 MB para upload fatiado no Drive
+const TEMPO_SESSAO_MS = 30 * 60 * 1000; // 30 minutos em milissegundos
 
-// === AUTENTICAÇÃO ===
-async function verificarSessao() {
-    const { data: { session } } = await supabase.auth.getSession();
-    const telaLogin = document.getElementById('tela-login');
-    const mainContent = document.getElementById('main-content');
 
-    if (session) {
-        telaLogin.classList.add('hidden');
-        mainContent.classList.remove('hidden');
-    } else {
-        telaLogin.classList.remove('hidden');
-        mainContent.classList.add('hidden');
+// ============================================================================
+// SISTEMA DE LOGIN GOOGLE (FRONT-END) COM EXPIRAÇÃO DE 30 MINUTOS
+// ============================================================================
+const telaLogin = document.getElementById('tela-login');
+const mainContent = document.getElementById('main-content');
+let timerExpiracao;
+
+window.handleCredentialResponse = function(response) {
+    if (response.credential) {
+        localStorage.setItem('polymusic_login_time', Date.now().toString());
+        verificarSessao();
+    }
+};
+
+function carregarBotaoGoogle() {
+    if (window.google && window.google.accounts) {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse
+        });
+        google.accounts.id.renderButton(
+            document.getElementById("buttonDiv"),
+            { theme: "outline", size: "large", text: "continue_with", width: "100%" }
+        );
     }
 }
 
-document.getElementById('btn-login-google').addEventListener('click', async () => {
-    await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.href }
-    });
-});
+function verificarSessao() {
+    const loginTime = localStorage.getItem('polymusic_login_time');
+    
+    if (loginTime) {
+        const tempoPassado = Date.now() - parseInt(loginTime);
+        if (tempoPassado < TEMPO_SESSAO_MS) {
+            telaLogin.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+            
+            const tempoRestante = TEMPO_SESSAO_MS - tempoPassado;
+            clearTimeout(timerExpiracao);
+            timerExpiracao = setTimeout(encerrarSessao, tempoRestante);
+            return;
+        }
+    }
+    mostrarTelaLogin();
+}
 
-verificarSessao();
-supabase.auth.onAuthStateChange(() => verificarSessao());
+function encerrarSessao() {
+    localStorage.removeItem('polymusic_login_time');
+    mostrarTelaLogin();
+    alert("⏳ Por motivos de segurança, sua sessão de 30 minutos expirou. Por favor, faça login novamente.");
+}
+
+function mostrarTelaLogin() {
+    telaLogin.classList.remove('hidden');
+    mainContent.classList.add('hidden');
+    clearTimeout(timerExpiracao);
+    carregarBotaoGoogle();
+}
+
+window.onload = function () {
+    setTimeout(() => {
+        verificarSessao();
+        if (!telaLogin.classList.contains('hidden')) carregarBotaoGoogle();
+    }, 500);
+};
 
 
-// === DOM ELEMENTS ===
+// ============================================================================
+// LÓGICA DE INTERFACE (DOM)
+// ============================================================================
 const formatoSelect = document.getElementById('formato-projeto');
 const containerFaixas = document.getElementById('container-faixas');
 const btnAddFaixa = document.getElementById('btn-add-faixa');
@@ -41,7 +90,6 @@ const btnAddProdutor = document.getElementById('btn-add-produtor');
 const containerMusicos = document.getElementById('container-musicos');
 const btnAddMusico = document.getElementById('btn-add-musico');
 
-// === LÓGICA DE FAIXAS (S/ Release aqui) ===
 function criarCardFaixa(index) {
     const div = document.createElement('div');
     div.className = 'p-5 bg-zinc-900/50 border border-zinc-700/50 rounded-xl space-y-4 faixa-item relative';
@@ -103,8 +151,6 @@ containerFaixas.addEventListener('click', (e) => {
     }
 });
 
-
-// === LÓGICA DE PRODUTORES E MÚSICOS (Separados) ===
 function criarCardPessoa(tipo) {
     const isProdutor = tipo === 'produtor';
     const placeholderPapel = isProdutor ? "Papel (Ex: Produtor Musical, Mixagem)" : "Instrumento (Ex: Bateria, Baixo)";
@@ -114,10 +160,10 @@ function criarCardPessoa(tipo) {
     
     div.innerHTML = `
         <div class="md:col-span-4">
-            <input type="text" required placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-3 py-2 rounded-lg text-sm">
+            <input type="text" required placeholder="Nome Completo (Obrigatório)" class="input-nome-completo input-dark w-full px-3 py-2 rounded-lg text-sm">
         </div>
         <div class="md:col-span-4">
-            <input type="text" required placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-3 py-2 rounded-lg text-sm">
+            <input type="text" required placeholder="Nome Artístico (Obrigatório)" class="input-nome-artistico input-dark w-full px-3 py-2 rounded-lg text-sm">
         </div>
         <div class="md:col-span-3">
             <input type="text" placeholder="${placeholderPapel}" class="input-papel-pessoa input-dark w-full px-3 py-2 rounded-lg text-sm">
@@ -138,14 +184,15 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// INITIAL SETUP
 atualizarInterfaceFaixas();
 containerProdutores.appendChild(criarCardPessoa('produtor'));
 containerMusicos.appendChild(criarCardPessoa('musico'));
 formatoSelect.addEventListener('change', atualizarInterfaceFaixas);
 
 
-// === FUNÇÕES DE BANCO E DRIVE ===
+// ============================================================================
+// FUNÇÕES DE BANCO (SUPABASE) E GOOGLE DRIVE
+// ============================================================================
 async function obterOuCriarPessoa(nomeCompleto, nomeArtistico) {
     if (!nomeCompleto || nomeCompleto.trim() === '') return null;
     
@@ -211,9 +258,14 @@ async function fazerUploadDrive(arquivo, nomeProjeto, inicioProgressoGeral, fimP
 }
 
 
-// === SUBMIT PRINCIPAL ===
+// ============================================================================
+// ENVIO FINAL (SUBMIT)
+// ============================================================================
 document.getElementById('form-artista').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // Zera o timer de 30 minutos para ele não expirar no meio do upload do cara
+    clearTimeout(timerExpiracao);
     
     const nomeProjeto = document.getElementById('nome-projeto').value.trim();
     const artistaPrincipal = document.getElementById('artista-principal').value.trim();
@@ -244,7 +296,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
 
         atualizarProgresso(10, 'Criando projeto...');
 
-        // 1. SALVAR PROJETO (AGORA COM O RELEASE GERAL)
+        // 1. SALVAR PROJETO
         const { data: projeto, error: erroProj } = await supabase
             .from('projetos')
             .insert({
@@ -254,7 +306,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                 genero: document.getElementById('genero-projeto').value.trim() || null,
                 subgenero: document.getElementById('subgenero-projeto').value.trim() || null,
                 backup_url: document.getElementById('backup-url').value.trim() || null,
-                release_texto: releaseProjeto || null, // Release salvo aqui
+                release_texto: releaseProjeto || null,
                 data_lancamento: dataOculta.toISOString().split('T')[0],
                 capa_status: statusCapa,
                 audio_status: statusAudioProjeto,
@@ -279,7 +331,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }
         }
 
-        // 3. SALVAR PRODUTORES (PAPEL: PRODUTOR)
+        // 3. SALVAR PRODUTORES
         const produtores = document.querySelectorAll('.produtor-item');
         for (let p of produtores) {
             const nc = p.querySelector('.input-nome-completo').value.trim();
@@ -293,7 +345,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }
         }
 
-        // 4. SALVAR MÚSICOS (PAPEL: MUSICO)
+        // 4. SALVAR MÚSICOS
         const musicos = document.querySelectorAll('.musico-item');
         for (let m of musicos) {
             const nc = m.querySelector('.input-nome-completo').value.trim();
@@ -307,7 +359,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }
         }
 
-        // 5. UPLOAD CAPA E FAIXAS
+        // 5. UPLOAD CAPA E FAIXAS (DRIVE)
         let totalArquivosParaUpload = (arquivoCapa ? 1 : 0);
         faixas.forEach(f => { if (f.querySelector('.input-arquivo-faixa').files[0]) totalArquivosParaUpload++; });
         let arquivosEnviados = 0;
@@ -366,6 +418,8 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         
         setTimeout(() => {
             alert("Lançamento enviado com sucesso! Nosso time já recebeu seu material.");
+            // Limpa o login para forçar próximo artista a logar novamente, se preferir:
+            // localStorage.removeItem('polymusic_login_time'); 
             window.location.reload();
         }, 2000);
 
@@ -377,5 +431,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         alert("Falha: " + erro.message);
     } finally {
         document.getElementById('btn-enviar').disabled = false;
+        // Retoma o timer caso o envio falhe para a segurança continuar ativa
+        timerExpiracao = setTimeout(encerrarSessao, TEMPO_SESSAO_MS);
     }
 });
