@@ -171,40 +171,62 @@ document.addEventListener('click', (e) => {
 // ============================================================================
 // 4. FUNÇÕES DE UPLOAD (MÉTODO BASE64 - SEM ERRO DE CORS)
 // ============================================================================
-async function fazerUploadDrive(arquivo, nomeProjeto, fimProgresso) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const base64Data = e.target.result.split(',')[1];
-                const payload = {
-                    fileData: base64Data,
-                    fileName: arquivo.name,
-                    mimeType: arquivo.type || 'application/octet-stream',
-                    projectName: nomeProjeto
-                };
+// ============================================================================
+// FUNÇÃO DE UPLOAD EM PARTES (CHUNKED)
+// ============================================================================
+async function fazerUploadDrive(arquivo, nomeProjeto, progressoBase, progressoRange) {
+    // progressoBase: percentual já alcançado antes do upload (ex: 30)
+    // progressoRange: percentual que este upload representa (ex: 70)
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
+    const totalChunks = Math.ceil(arquivo.size / CHUNK_SIZE);
+    let chunkIndex = 0;
 
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
+    // Função para ler um bloco e retornar base64
+    const readChunk = (start, end) => {
+        return new Promise((resolve, reject) => {
+            const blob = arquivo.slice(start, end);
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result.split(',')[1]); // base64 sem prefixo
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
 
-                const result = await response.json();
+    // Envia cada bloco sequencialmente
+    for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, arquivo.size);
+        const base64Chunk = await readChunk(start, end);
 
-                if (result.status === "success") {
-                    const barra = document.getElementById('barra-progresso');
-                    if (barra) barra.style.width = `${fimProgresso}%`;
-                    resolve(result);
-                } else {
-                    reject(new Error(result.message));
-                }
-            } catch (err) {
-                reject(err);
-            }
+        const payload = {
+            fileName: arquivo.name,
+            mimeType: arquivo.type || 'application/octet-stream',
+            projectName: nomeProjeto,
+            chunkIndex: i,
+            totalChunks: totalChunks,
+            chunkData: base64Chunk
         };
-        reader.onerror = () => reject(new Error("Erro ao ler arquivo."));
-        reader.readAsDataURL(arquivo);
-    });
+
+        const response = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Falha ao enviar bloco ${i}: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        if (result.status !== 'success') {
+            throw new Error(`Erro no servidor ao enviar bloco ${i}: ${result.message || 'desconhecido'}`);
+        }
+
+        // Atualiza a barra de progresso: base + (i+1)/totalChunks * range
+        const progresso = progressoBase + ((i + 1) / totalChunks) * progressoRange;
+        const barra = document.getElementById('barra-progresso');
+        if (barra) barra.style.width = `${progresso}%`;
+    }
 }
 
 // ============================================================================
