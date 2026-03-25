@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pitching de Lançamento - Polymusic</title>
+    <title>POLYMUSIC | Envio de Lançamentos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
@@ -31,25 +31,35 @@
 </head>
 <body class="text-zinc-300 min-h-screen pb-12 font-sans selection:bg-indigo-500 selection:text-white">
 
+    <!-- TELA DE LOGIN PERSONALIZADA -->
     <div id="tela-login" class="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-md px-2">
         <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
             <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-indigo-500/30">
                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
             </div>
-            <h2 class="text-2xl font-bold text-white mb-2">Acesso Restrito</h2>
-            <p class="text-sm text-zinc-400 mb-8">Faça login com sua conta Google. A sessão expira em 30 minutos.</p>
+            <h1 class="text-3xl font-bold text-white mb-1">POLYMUSIC</h1>
+            <p class="text-indigo-300 text-sm font-medium mb-6">Gerenciamento de Projetos</p>
+            <p class="text-sm text-zinc-400 mb-8">
+                Área exclusiva para artistas enviarem <strong>metadados, ficha técnica e arquivos</strong> do seu lançamento.<br>
+                Faça login com sua conta Google para acessar o formulário.
+            </p>
             <div id="buttonDiv" class="flex justify-center w-full"></div>
+            <p class="text-[11px] text-zinc-500 mt-6">Sessão expira em 30 minutos por segurança.</p>
         </div>
     </div>
 
-    <header class="pt-8 sm:pt-12 pb-6 px-2 text-center">
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Portal do Artista</h1>
-        <p class="text-indigo-300 text-xs sm:text-sm mt-2 font-medium tracking-wide uppercase">Envio de Lançamentos Oficiais</p>
-    </header>
-
+    <!-- CONTEÚDO PRINCIPAL (oculto até login) -->
     <main class="w-full max-w-3xl mx-auto px-2 sm:px-4 hidden" id="main-content">
+        <div class="text-center mt-6 mb-8">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">📋 Envio de Lançamento</h1>
+            <p class="text-indigo-300 text-xs sm:text-sm mt-2">
+                Preencha todas as informações abaixo com atenção. Os dados serão utilizados para registro, distribuição e marketing.
+            </p>
+        </div>
+
         <form id="form-artista" class="space-y-6 sm:space-y-8">
             
+            <!-- INFORMAÇÕES GERAIS -->
             <div class="glass-panel p-4 sm:p-6 rounded-2xl shadow-xl">
                 <h2 class="font-bold text-lg text-white mb-4 sm:mb-5 flex items-center gap-2">
                     <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">1</span> 
@@ -105,12 +115,13 @@
                     </div>
 
                     <div class="pt-4 border-t border-zinc-700/50">
-                        <label class="block text-sm font-semibold text-zinc-300 mb-1">Release do Projeto (Pitching)</label>
-                        <textarea id="release-projeto" class="input-dark w-full px-4 py-3 rounded-xl h-28 resize-none" placeholder="Conte a história do projeto..."></textarea>
+                        <label class="block text-sm font-semibold text-zinc-300 mb-1">Release / Pitching</label>
+                        <textarea id="release-projeto" class="input-dark w-full px-4 py-3 rounded-xl h-28 resize-none" placeholder="Conte a história do projeto, inspirações, mensagem, etc..."></textarea>
                     </div>
                 </div>
             </div>
 
+            <!-- ARQUIVOS E MÍDIA -->
             <div class="glass-panel p-4 sm:p-6 rounded-2xl shadow-xl">
                 <h2 class="font-bold text-lg text-white mb-4 sm:mb-5 flex items-center gap-2">
                     <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">2</span> 
@@ -136,6 +147,7 @@
                 </div>
             </div>
 
+            <!-- FAIXAS -->
             <div class="glass-panel p-4 sm:p-6 rounded-2xl shadow-xl">
                 <div class="flex justify-between items-center mb-4 sm:mb-5">
                     <h2 class="font-bold text-lg text-white flex items-center gap-2">
@@ -152,9 +164,11 @@
                 </div>
                 
                 <div id="container-faixas" class="space-y-4 sm:space-y-6">
-                    </div>
+                    <!-- As faixas serão inseridas dinamicamente via JS -->
+                </div>
             </div>
 
+            <!-- FICHA TÉCNICA -->
             <div class="glass-panel p-4 sm:p-6 rounded-2xl shadow-xl">
                 <h2 class="font-bold text-lg text-white mb-5 sm:mb-6 flex items-center gap-2 border-b border-zinc-700/50 pb-4">
                     <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">4</span> 
@@ -178,12 +192,14 @@
                 </div>
             </div>
 
+            <!-- BOTÃO DE ENVIO -->
             <div class="pt-2 pb-12">
                 <button type="submit" id="btn-enviar" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition active:scale-95 text-base sm:text-lg">
                     Finalizar e Enviar Lançamento
                 </button>
             </div>
 
+            <!-- BARRA DE PROGRESSO -->
             <div id="area-status" class="hidden fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-md glass-panel p-4 sm:p-5 rounded-2xl shadow-2xl z-50">
                 <p id="texto-status" class="text-xs sm:text-sm font-bold text-white mb-2 sm:mb-3 text-center">Analisando projeto...</p>
                 <div class="w-full bg-zinc-800 rounded-full h-2 mb-1 overflow-hidden">
