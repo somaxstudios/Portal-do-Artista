@@ -3,8 +3,8 @@ import { supabase } from './supabase-config.js';
 // ============================================================================
 // CONFIGURAÇÕES GERAIS
 // ============================================================================
-// COLOQUE O SEU CLIENT ID DO GOOGLE CLOUD AQUI (Gerado no painel do Google Cloud):
-const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com";
+// SEU CLIENT ID REAL DO GOOGLE CLOUD:
+const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com"; 
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwLfdrcRFo3kj5rDh2RF54p2wb6aus7t2NjcMU4Ie-CWXH0tTk1THgx-_RzGHCXCcN5/exec";
 const TAMANHO_PEDACO = 5 * 1024 * 1024; // 5 MB para upload fatiado no Drive
@@ -17,6 +17,7 @@ const TEMPO_SESSAO_MS = 30 * 60 * 1000; // 30 minutos em milissegundos
 const telaLogin = document.getElementById('tela-login');
 const mainContent = document.getElementById('main-content');
 let timerExpiracao;
+let googleInicializado = false; // Controle para evitar erro de inicialização dupla
 
 window.handleCredentialResponse = function(response) {
     if (response.credential) {
@@ -26,15 +27,17 @@ window.handleCredentialResponse = function(response) {
 };
 
 function carregarBotaoGoogle() {
-    if (window.google && window.google.accounts) {
+    if (window.google && window.google.accounts && !googleInicializado) {
         google.accounts.id.initialize({
             client_id: GOOGLE_CLIENT_ID,
             callback: handleCredentialResponse
         });
         google.accounts.id.renderButton(
             document.getElementById("buttonDiv"),
-            { theme: "outline", size: "large", text: "continue_with", width: "100%" }
+            // Tamanho fixo em pixels para evitar o erro de largura inválida (100%)
+            { theme: "outline", size: "large", text: "continue_with", width: 280 } 
         );
+        googleInicializado = true;
     }
 }
 
@@ -72,7 +75,6 @@ function mostrarTelaLogin() {
 window.onload = function () {
     setTimeout(() => {
         verificarSessao();
-        if (!telaLogin.classList.contains('hidden')) carregarBotaoGoogle();
     }, 500);
 };
 
@@ -264,7 +266,7 @@ async function fazerUploadDrive(arquivo, nomeProjeto, inicioProgressoGeral, fimP
 document.getElementById('form-artista').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Zera o timer de 30 minutos para ele não expirar no meio do upload do cara
+    // Zera o timer de 30 minutos para ele não expirar no meio do upload
     clearTimeout(timerExpiracao);
     
     const nomeProjeto = document.getElementById('nome-projeto').value.trim();
@@ -418,8 +420,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         
         setTimeout(() => {
             alert("Lançamento enviado com sucesso! Nosso time já recebeu seu material.");
-            // Limpa o login para forçar próximo artista a logar novamente, se preferir:
-            // localStorage.removeItem('polymusic_login_time'); 
             window.location.reload();
         }, 2000);
 
