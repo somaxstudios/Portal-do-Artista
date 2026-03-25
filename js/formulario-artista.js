@@ -83,23 +83,24 @@ const btnAddMusico = document.getElementById('btn-add-musico');
 // Mini-formulário de Participantes DENTRO da faixa (Autores, Interpretes, Feats)
 function criarParticipanteFaixa() {
     const div = document.createElement('div');
-    div.className = 'grid grid-cols-1 md:grid-cols-12 gap-2 bg-zinc-950/40 p-2 rounded-lg border border-zinc-700/30 participante-faixa-item mt-2';
+    // Ajustado padding e gap para mobile
+    div.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-3 bg-zinc-950/40 p-3 sm:p-2 rounded-lg border border-zinc-700/30 participante-faixa-item mt-2';
     div.innerHTML = `
-        <div class="md:col-span-4">
-            <input type="text" required placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-2 py-1.5 rounded text-xs">
+        <div class="sm:col-span-4">
+            <input type="text" required placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
         </div>
-        <div class="md:col-span-4">
-            <input type="text" required placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-2 py-1.5 rounded text-xs">
+        <div class="sm:col-span-4">
+            <input type="text" required placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
         </div>
-        <div class="md:col-span-3">
-            <select class="input-papel-participante input-dark w-full px-2 py-1.5 rounded text-xs">
+        <div class="sm:col-span-3">
+            <select class="input-papel-participante input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
                 <option value="AUTOR">Compositor / Autor</option>
                 <option value="INTERPRETE">Intérprete Principal</option>
                 <option value="FEAT">Participação (Feat)</option>
             </select>
         </div>
-        <div class="md:col-span-1 flex items-center justify-center">
-            <button type="button" class="text-red-400 hover:text-red-300 text-lg font-bold btn-remover-elemento" title="Remover">&times;</button>
+        <div class="sm:col-span-1 flex items-center justify-end sm:justify-center mt-1 sm:mt-0">
+            <button type="button" class="text-red-400 hover:text-red-300 text-sm sm:text-lg font-bold btn-remover-elemento" title="Remover">Excluir</button>
         </div>
     `;
     return div;
@@ -108,47 +109,47 @@ function criarParticipanteFaixa() {
 // Criação do Card da Faixa
 function criarCardFaixa(index) {
     const div = document.createElement('div');
-    div.className = 'p-5 bg-zinc-900/50 border border-zinc-700/50 rounded-xl space-y-4 faixa-item relative';
+    // Reduzido o padding no mobile (p-3) e maior no desktop (sm:p-5)
+    div.className = 'p-3 sm:p-5 bg-zinc-900/50 border border-zinc-700/50 rounded-xl space-y-4 faixa-item relative';
     
     div.innerHTML = `
         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
-            <h3 class="font-bold text-indigo-400">Faixa ${index}</h3>
-            ${index > 1 ? `<button type="button" class="text-red-400 text-xs font-bold btn-remover-elemento hover:text-red-300">Remover Faixa</button>` : ''}
+            <h3 class="font-bold text-indigo-400 text-sm sm:text-base">Faixa ${index}</h3>
+            ${index > 1 ? `<button type="button" class="text-red-400 text-[10px] sm:text-xs font-bold btn-remover-elemento hover:text-red-300 uppercase tracking-wider">Remover Faixa</button>` : ''}
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold text-zinc-400 mb-1">Título da Faixa (Obrigatório)</label>
-                <input type="text" required class="input-titulo-faixa input-dark w-full px-3 py-2 rounded-lg">
+                <input type="text" required class="input-titulo-faixa input-dark w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg">
             </div>
             <div>
                 <label class="block text-xs font-semibold text-zinc-400 mb-1">Arquivo de Áudio</label>
-                <input type="file" accept="audio/*" class="input-arquivo-faixa w-full text-xs text-zinc-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-500/20 file:text-indigo-300">
+                <input type="file" accept="audio/*" class="input-arquivo-faixa w-full text-xs text-zinc-400 file:mr-2 file:py-2 sm:file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-500/20 file:text-indigo-300">
             </div>
         </div>
 
         <div class="bg-zinc-800/30 p-3 rounded-xl border border-zinc-700/30">
-            <div class="flex justify-between items-center mb-2">
-                <label class="block text-xs font-semibold text-zinc-300">Autores, Intérpretes e Feats (Desta Faixa)</label>
-                <button type="button" class="btn-add-participante-faixa text-[10px] bg-zinc-700 hover:bg-zinc-600 text-white px-2 py-1 rounded transition">+ Adicionar Pessoa</button>
+            <div class="flex justify-between items-center mb-3">
+                <label class="block text-[10px] sm:text-xs font-semibold text-zinc-300 uppercase">Autores, Intérpretes e Feats</label>
+                <button type="button" class="btn-add-participante-faixa text-[10px] bg-zinc-700 hover:bg-zinc-600 text-white px-2 py-1 rounded transition">+ Adicionar</button>
             </div>
-            <div class="container-participantes-faixa space-y-2">
+            <div class="container-participantes-faixa space-y-3 sm:space-y-2">
                 </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-semibold text-zinc-400 mb-1">Letra da Música</label>
-                <textarea class="input-letra-faixa input-dark w-full px-3 py-2 rounded-lg h-20 resize-none" placeholder="Cole a letra oficial aqui..."></textarea>
+                <textarea class="input-letra-faixa input-dark w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg h-24 sm:h-20 resize-none" placeholder="Cole a letra oficial aqui..."></textarea>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-zinc-400 mb-1">Hook TikTok (MM:SS) - Opcional</label>
-                <input type="text" class="input-hook-faixa input-dark w-full px-3 py-2 rounded-lg" placeholder="Ex: 01:15">
+                <input type="text" class="input-hook-faixa input-dark w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg" placeholder="Ex: 01:15">
             </div>
         </div>
     `;
 
-    // Adiciona o primeiro participante vazio por padrão como "AUTOR"
     const containerParts = div.querySelector('.container-participantes-faixa');
     containerParts.appendChild(criarParticipanteFaixa());
 
@@ -173,22 +174,23 @@ btnAddFaixa.addEventListener('click', () => {
 // Músicos e Produtores (Gerais do Projeto)
 function criarCardPessoa(tipo) {
     const isProdutor = tipo === 'produtor';
-    const placeholderPapel = isProdutor ? "Papel (Ex: Produtor Musical, Mixagem)" : "Instrumento (Ex: Bateria, Baixo)";
+    const placeholderPapel = isProdutor ? "Papel (Ex: Produtor, Mixagem)" : "Instrumento (Bateria, Baixo)";
     const div = document.createElement('div');
-    div.className = `grid grid-cols-1 md:grid-cols-12 gap-3 bg-zinc-900/30 p-3 rounded-xl border border-zinc-800/50 ${tipo}-item`;
+    // Ajustado padding e grids para mobile
+    div.className = `grid grid-cols-1 sm:grid-cols-12 gap-3 bg-zinc-900/30 p-4 sm:p-3 rounded-xl border border-zinc-800/50 ${tipo}-item`;
     
     div.innerHTML = `
-        <div class="md:col-span-4">
-            <input type="text" required placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-3 py-2 rounded-lg text-sm">
+        <div class="sm:col-span-4">
+            <input type="text" required placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
         </div>
-        <div class="md:col-span-4">
-            <input type="text" required placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-3 py-2 rounded-lg text-sm">
+        <div class="sm:col-span-4">
+            <input type="text" required placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
         </div>
-        <div class="md:col-span-3">
-            <input type="text" placeholder="${placeholderPapel}" class="input-papel-pessoa input-dark w-full px-3 py-2 rounded-lg text-sm">
+        <div class="sm:col-span-3">
+            <input type="text" placeholder="${placeholderPapel}" class="input-papel-pessoa input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
         </div>
-        <div class="md:col-span-1 flex items-center justify-center">
-            <button type="button" class="text-red-400 hover:text-red-300 text-xl font-bold btn-remover-elemento" title="Excluir">&times;</button>
+        <div class="sm:col-span-1 flex items-center justify-end sm:justify-center">
+            <button type="button" class="text-red-400 hover:text-red-300 text-sm font-bold btn-remover-elemento uppercase tracking-wide" title="Excluir">Excluir</button>
         </div>
     `;
     return div;
@@ -197,14 +199,11 @@ function criarCardPessoa(tipo) {
 btnAddProdutor.addEventListener('click', () => containerProdutores.appendChild(criarCardPessoa('produtor')));
 btnAddMusico.addEventListener('click', () => containerMusicos.appendChild(criarCardPessoa('musico')));
 
-// Delegação de Eventos para botões gerados dinamicamente
 document.addEventListener('click', (e) => {
-    // Adicionar Participante na Faixa
     if (e.target.classList.contains('btn-add-participante-faixa')) {
         const container = e.target.closest('.bg-zinc-800\\/30').querySelector('.container-participantes-faixa');
         container.appendChild(criarParticipanteFaixa());
     }
-    // Remover qualquer elemento dinâmico (Faixa, Músico, Autor, etc)
     if (e.target.classList.contains('btn-remover-elemento')) {
         const isFaixa = e.target.closest('.faixa-item');
         e.target.closest('div[class*="-item"]').remove();
@@ -298,7 +297,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         
         atualizarProgresso(10, 'Criando projeto...');
 
-        // 1. SALVAR PROJETO
         const { data: projeto, error: erroProj } = await supabase.from('projetos').insert({
             nome_projeto: nomeProjeto,
             titulo: artistaPrincipal,
@@ -318,7 +316,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         if (erroProj) throw erroProj;
         const projetoId = projeto.id;
 
-        // 2. SALVAR FEAT DO PROJETO
         const featProjeto = document.getElementById('feat-projeto').value.trim();
         if (featProjeto && featProjeto.toLowerCase() !== 'nenhum') {
             const listaFeats = featProjeto.split(',');
@@ -330,7 +327,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }
         }
 
-        // 3. SALVAR PRODUTORES E MÚSICOS DO PROJETO
         const equipe = [...document.querySelectorAll('.produtor-item'), ...document.querySelectorAll('.musico-item')];
         for (let membro of equipe) {
             const nc = membro.querySelector('.input-nome-completo').value.trim();
@@ -344,7 +340,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }
         }
 
-        // 4. PREPARAR UPLOADS E SALVAR FAIXAS
         let totalArquivosParaUpload = (arquivoCapa ? 1 : 0);
         faixas.forEach(f => { if (f.querySelector('.input-arquivo-faixa').files[0]) totalArquivosParaUpload++; });
         let arquivosEnviados = 0;
@@ -364,7 +359,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             const letra = f.querySelector('.input-letra-faixa').value.trim();
             const arquivoAudio = f.querySelector('.input-arquivo-faixa').files[0];
             
-            // Salva a Faixa
             const { data: faixaSalva, error: erroFaixa } = await supabase.from('projeto_faixas').insert({
                 projeto_id: projetoId, 
                 numero_faixa: i + 1, 
@@ -377,7 +371,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             
             if (erroFaixa) throw erroFaixa;
 
-            // Salva Autores, Intérpretes e Feats DESTA FAIXA
             const participantesFaixa = f.querySelectorAll('.participante-faixa-item');
             for (let pf of participantesFaixa) {
                 const nc = pf.querySelector('.input-nome-completo').value.trim();
@@ -395,7 +388,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                 }
             }
 
-            // Upload do Áudio
             if (arquivoAudio) {
                 atualizarProgresso(15, `Enviando áudio: ${titulo}...`);
                 let pInicio = 15 + ((arquivosEnviados / totalArquivosParaUpload) * 75);
