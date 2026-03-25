@@ -244,28 +244,46 @@ function atualizarProgresso(porcentagem, texto) {
 }
 
 async function fazerUploadDrive(arquivo, nomeProjeto, inicioProgressoGeral, fimProgressoGeral) {
-    const payloadInfo = { fileName: arquivo.name, mimeType: arquivo.type || 'application/octet-stream', fileSize: arquivo.size, projectName: nomeProjeto };
-    const resPasse = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payloadInfo) });
-    const dadosPasse = await resPasse.json();
-    if (dadosPasse.status !== 'success') throw new Error("Falha ao autorizar Drive");
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        // Converte o arquivo para Base64 para enviar via Script
+        reader.onload = async function(e) {
+            try {
+                const base64Data = e.target.result.split(',')[1];
+                
+                const payload = {
+                    fileData: base64Data,
+                    fileName: arquivo.name,
+                    mimeType: arquivo.type || 'application/octet-stream',
+                    projectName: nomeProjeto
+                };
 
-    const urlUpload = dadosPasse.uploadUrl;
-    const tamanhoTotal = arquivo.size;
-    let inicio = 0;
+                // Envia para o seu GAS_URL (O Script do Google)
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
 
-    while (inicio < tamanhoTotal) {
-        const fim = Math.min(inicio + TAMANHO_PEDACO, tamanhoTotal);
-        const pedaco = arquivo.slice(inicio, fim);
-        const headers = { 'Content-Range': `bytes ${inicio}-${fim - 1}/${tamanhoTotal}` };
+                if (!response.ok) throw new Error("Erro na comunicação com o Google Script.");
 
-        const resposta = await fetch(urlUpload, { method: 'PUT', headers: headers, body: pedaco });
-        if (!resposta.ok && resposta.status !== 308) throw new Error("Erro no envio do pedaço.");
+                const result = await response.json();
 
-        inicio = fim;
-        const progressoArquivo = (inicio / tamanhoTotal);
-        const progressoReal = inicioProgressoGeral + (progressoArquivo * (fimProgressoGeral - inicioProgressoGeral));
-        atualizarProgresso(progressoReal);
-    }
+                if (result.status === "success") {
+                    // Atualiza a barra de progresso para o final deste arquivo
+                    document.getElementById('barra-progresso').style.width = `${fimProgressoGeral}%`;
+                    resolve(result);
+                } else {
+                    reject(new Error(result.message));
+                }
+            } catch (err) {
+                reject(err);
+            }
+        };
+
+        reader.onerror = () => reject(new Error("Erro ao ler o arquivo no navegador."));
+        reader.readAsDataURL(arquivo);
+    });
 }
 
 
