@@ -4,7 +4,7 @@ import { supabase } from './supabase-config.js';
 // CONFIGURAÇÕES GERAIS
 // ============================================================================
 // COLOQUE O SEU CLIENT ID DO GOOGLE CLOUD AQUI (Gerado no painel do Google Cloud):
-const GOOGLE_CLIENT_ID = "5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com"; 
+const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com";
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwLfdrcRFo3kj5rDh2RF54p2wb6aus7t2NjcMU4Ie-CWXH0tTk1THgx-_RzGHCXCcN5/exec";
 const TAMANHO_PEDACO = 5 * 1024 * 1024; // 5 MB para upload fatiado no Drive
