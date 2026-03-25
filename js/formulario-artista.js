@@ -1,21 +1,27 @@
 import { supabase } from './supabase-config.js';
 
 // ============================================================================
-// CONFIGURAÇÕES GERAIS
+// 1. CONFIGURAÇÕES (Certifique-se de que o GAS_URL é o da NOVA IMPLANTAÇÃO)
 // ============================================================================
-const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com";
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwLfdrcRFo3kj5rDh2RF54p2wb6aus7t2NjcMU4Ie-CWXH0tTk1THgx-_RzGHCXCcN5/exec";
-const TAMANHO_PEDACO = 5 * 1024 * 1024;
-const TEMPO_SESSAO_MS = 30 * 60 * 1000;
+const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com"; 
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyvSCokiSJTKgO7utbmw5kfpfZuf8LUa22SDoFqnDgfgDR9Bv3Z8Zic45y0oY2M3_Yk/exec"; 
+const TEMPO_SESSAO_MS = 30 * 60 * 1000; 
 
-// ============================================================================
-// SISTEMA DE LOGIN GOOGLE (FRONT-END)
-// ============================================================================
+let timerExpiracao;
+let googleInicializado = false; 
+
+// Elementos do DOM
 const telaLogin = document.getElementById('tela-login');
 const mainContent = document.getElementById('main-content');
-let timerExpiracao;
-let googleInicializado = false;
+const formatoSelect = document.getElementById('formato-projeto');
+const containerFaixas = document.getElementById('container-faixas');
+const btnAddFaixa = document.getElementById('btn-add-faixa');
+const containerProdutores = document.getElementById('container-produtores');
+const containerMusicos = document.getElementById('container-musicos');
 
+// ============================================================================
+// 2. SISTEMA DE LOGIN GOOGLE
+// ============================================================================
 window.handleCredentialResponse = function(response) {
     if (response.credential) {
         localStorage.setItem('polymusic_login_time', Date.now().toString());
@@ -31,7 +37,7 @@ function carregarBotaoGoogle() {
         });
         google.accounts.id.renderButton(
             document.getElementById("buttonDiv"),
-            { theme: "outline", size: "large", text: "continue_with", width: 280 }
+            { theme: "outline", size: "large", text: "continue_with", width: 280 } 
         );
         googleInicializado = true;
     }
@@ -65,84 +71,58 @@ function mostrarTelaLogin() {
     carregarBotaoGoogle();
 }
 
-window.onload = () => setTimeout(verificarSessao, 500);
-
+window.onload = () => {
+    setTimeout(verificarSessao, 500);
+    atualizarInterfaceFaixas();
+    // Adiciona uma linha inicial na ficha técnica se estiver vazio
+    if (containerProdutores.children.length === 0) document.getElementById('btn-add-produtor').click();
+    if (containerMusicos.children.length === 0) document.getElementById('btn-add-musico').click();
+};
 
 // ============================================================================
-// LÓGICA DE INTERFACE (DOM) - FAIXAS E METADADOS
+// 3. LÓGICA DE INTERFACE (PESSOAS E FAIXAS)
 // ============================================================================
-const formatoSelect = document.getElementById('formato-projeto');
-const containerFaixas = document.getElementById('container-faixas');
-const btnAddFaixa = document.getElementById('btn-add-faixa');
 
-const containerProdutores = document.getElementById('container-produtores');
-const btnAddProdutor = document.getElementById('btn-add-produtor');
-const containerMusicos = document.getElementById('container-musicos');
-const btnAddMusico = document.getElementById('btn-add-musico');
-
+// Criação de Participantes da Faixa (Autores, Interpretes, Feats)
 function criarParticipanteFaixa() {
     const div = document.createElement('div');
-    div.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-3 bg-zinc-950/40 p-3 sm:p-2 rounded-lg border border-zinc-700/30 participante-faixa-item mt-2';
+    div.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 bg-zinc-950/40 p-3 rounded-lg border border-zinc-700/30 participante-faixa-item mt-2';
     div.innerHTML = `
-        <div class="sm:col-span-4">
-            <input type="text" placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
-        </div>
-        <div class="sm:col-span-4">
-            <input type="text" placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
-        </div>
+        <div class="sm:col-span-4"><input type="text" placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
+        <div class="sm:col-span-4"><input type="text" placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
         <div class="sm:col-span-3">
-            <select class="input-papel-participante input-dark w-full px-3 py-2 sm:py-1.5 rounded-lg sm:rounded text-sm sm:text-xs">
-                <option value="AUTOR">Compositor / Autor</option>
-                <option value="INTERPRETE">Intérprete Principal</option>
-                <option value="FEAT">Participação (Feat)</option>
+            <select class="input-papel-participante input-dark w-full px-3 py-2 rounded-lg text-sm">
+                <option value="AUTOR">Autor/Compositor</option>
+                <option value="INTERPRETE">Intérprete</option>
+                <option value="FEAT">Feat</option>
             </select>
         </div>
-        <div class="sm:col-span-1 flex items-center justify-end sm:justify-center mt-1 sm:mt-0">
-            <button type="button" class="text-red-400 hover:text-red-300 text-sm sm:text-lg font-bold btn-remover-elemento" title="Remover">Excluir</button>
-        </div>
+        <div class="sm:col-span-1 flex items-center justify-center"><button type="button" class="text-red-400 btn-remover-elemento text-xl">&times;</button></div>
     `;
     return div;
 }
 
 function criarCardFaixa(index) {
     const div = document.createElement('div');
-    div.className = 'p-3 sm:p-5 bg-zinc-900/50 border border-zinc-700/50 rounded-xl space-y-4 faixa-item relative';
-
+    div.className = 'p-4 sm:p-5 bg-zinc-900/50 border border-zinc-700/50 rounded-xl space-y-4 faixa-item';
     div.innerHTML = `
         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
-            <h3 class="font-bold text-indigo-400 text-sm sm:text-base">Faixa ${index}</h3>
-            ${index > 1 ? `<button type="button" class="text-red-400 text-[10px] sm:text-xs font-bold btn-remover-elemento hover:text-red-300 uppercase tracking-wider">Remover Faixa</button>` : ''}
+            <h3 class="font-bold text-indigo-400">Faixa ${index}</h3>
+            ${index > 1 ? `<button type="button" class="text-red-400 text-xs btn-remover-elemento">Excluir Faixa</button>` : ''}
         </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-semibold text-zinc-400 mb-1">Título da Faixa (Obrigatório)</label>
-                <input type="text" required class="input-titulo-faixa input-dark w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-zinc-400 mb-1">Arquivo de Áudio</label>
-                <input type="file" accept="audio/*" class="input-arquivo-faixa w-full text-xs text-zinc-400 file:mr-2 file:py-2 sm:file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-500/20 file:text-indigo-300">
-            </div>
+            <div><label class="block text-xs font-semibold text-zinc-400 mb-1">Título da Música</label>
+            <input type="text" required class="input-titulo-faixa input-dark w-full px-4 py-2 rounded-xl"></div>
+            <div><label class="block text-xs font-semibold text-zinc-400 mb-1">Arquivo (Opcional se usar Link)</label>
+            <input type="file" accept="audio/*" class="input-arquivo-faixa w-full text-xs text-zinc-400 file:mr-2 file:py-2 file:px-3 file:bg-indigo-500/20 file:text-indigo-300 file:border-0 file:rounded-lg"></div>
         </div>
-
         <div class="bg-zinc-800/30 p-3 rounded-xl border border-zinc-700/30">
-            <div class="flex justify-between items-center mb-3">
-                <label class="block text-[10px] sm:text-xs font-semibold text-zinc-300 uppercase">Autores, Intérpretes e Feats</label>
-                <button type="button" class="btn-add-participante-faixa text-[10px] bg-zinc-700 hover:bg-zinc-600 text-white px-2 py-1 rounded transition">+ Adicionar</button>
-            </div>
-            <div class="container-participantes-faixa space-y-3 sm:space-y-2"></div>
+            <div class="flex justify-between items-center mb-2"><label class="text-xs font-bold text-zinc-300">CRÉDITOS DA FAIXA</label>
+            <button type="button" class="btn-add-participante-faixa text-[10px] bg-zinc-700 px-2 py-1 rounded">+ Pessoa</button></div>
+            <div class="container-participantes-faixa space-y-2"></div>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-semibold text-zinc-400 mb-1">Letra da Música</label>
-                <textarea class="input-letra-faixa input-dark w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg h-24 sm:h-20 resize-none" placeholder="Cole a letra oficial aqui..."></textarea>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-zinc-400 mb-1">Hook TikTok (MM:SS) - Opcional</label>
-                <input type="text" class="input-hook-faixa input-dark w-full px-4 py-3 sm:py-2 rounded-xl sm:rounded-lg" placeholder="Ex: 01:15">
-            </div>
-        </div>
+        <div><label class="block text-xs font-semibold text-zinc-400 mb-1">Letra</label>
+        <textarea class="input-letra-faixa input-dark w-full px-4 py-2 rounded-xl h-24 resize-none"></textarea></div>
     `;
     div.querySelector('.container-participantes-faixa').appendChild(criarParticipanteFaixa());
     return div;
@@ -158,100 +138,46 @@ function atualizarInterfaceFaixas() {
     }
 }
 
-btnAddFaixa.addEventListener('click', () => {
-    containerFaixas.appendChild(criarCardFaixa(containerFaixas.querySelectorAll('.faixa-item').length + 1));
-});
-
 function criarCardPessoa(tipo) {
     const isProdutor = tipo === 'produtor';
-    const placeholderPapel = isProdutor ? "Papel (Ex: Produtor, Mixagem)" : "Instrumento (Bateria, Baixo)";
     const div = document.createElement('div');
-    div.className = `grid grid-cols-1 sm:grid-cols-12 gap-3 bg-zinc-900/30 p-4 sm:p-3 rounded-xl border border-zinc-800/50 ${tipo}-item`;
-
+    div.className = `grid grid-cols-1 sm:grid-cols-12 gap-3 bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/50 ${tipo}-item`;
     div.innerHTML = `
-        <div class="sm:col-span-4">
-            <input type="text" placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
-        </div>
-        <div class="sm:col-span-4">
-            <input type="text" placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
-        </div>
-        <div class="sm:col-span-3">
-            <input type="text" placeholder="${placeholderPapel}" class="input-papel-pessoa input-dark w-full px-4 sm:px-3 py-3 sm:py-2 rounded-xl sm:rounded-lg text-sm">
-        </div>
-        <div class="sm:col-span-1 flex items-center justify-end sm:justify-center">
-            <button type="button" class="text-red-400 hover:text-red-300 text-sm font-bold btn-remover-elemento uppercase tracking-wide" title="Excluir">Excluir</button>
-        </div>
+        <div class="sm:col-span-4"><input type="text" placeholder="Nome Completo" class="input-nome-completo input-dark w-full px-4 py-2 rounded-xl text-sm"></div>
+        <div class="sm:col-span-4"><input type="text" placeholder="Nome Artístico" class="input-nome-artistico input-dark w-full px-4 py-2 rounded-xl text-sm"></div>
+        <div class="sm:col-span-3"><input type="text" placeholder="${isProdutor ? 'Papel' : 'Instrumento'}" class="input-papel-pessoa input-dark w-full px-4 py-2 rounded-xl text-sm"></div>
+        <div class="sm:col-span-1 flex items-center justify-center"><button type="button" class="text-red-400 btn-remover-elemento text-xl">&times;</button></div>
     `;
     return div;
 }
 
-btnAddProdutor.addEventListener('click', () => containerProdutores.appendChild(criarCardPessoa('produtor')));
-btnAddMusico.addEventListener('click', () => containerMusicos.appendChild(criarCardPessoa('musico')));
+// Listeners de Interface
+formatoSelect.addEventListener('change', atualizarInterfaceFaixas);
+document.getElementById('btn-add-faixa').addEventListener('click', () => containerFaixas.appendChild(criarCardFaixa(containerFaixas.querySelectorAll('.faixa-item').length + 1)));
+document.getElementById('btn-add-produtor').addEventListener('click', () => containerProdutores.appendChild(criarCardPessoa('produtor')));
+document.getElementById('btn-add-musico').addEventListener('click', () => containerMusicos.appendChild(criarCardPessoa('musico')));
 
 document.addEventListener('click', (e) => {
     if (e.target.classList.contains('btn-add-participante-faixa')) {
-        const container = e.target.closest('.bg-zinc-800\\/30').querySelector('.container-participantes-faixa');
-        container.appendChild(criarParticipanteFaixa());
+        e.target.closest('.bg-zinc-800\\/30').querySelector('.container-participantes-faixa').appendChild(criarParticipanteFaixa());
     }
     if (e.target.classList.contains('btn-remover-elemento')) {
-        const isFaixa = e.target.closest('.faixa-item');
-        e.target.closest('div[class*="-item"]').remove();
-        if (isFaixa) {
-            document.querySelectorAll('.faixa-item h3').forEach((h3, i) => h3.textContent = `Faixa ${i + 1}`);
-        }
+        const item = e.target.closest('.faixa-item') || e.target.closest('div[class*="-item"]') || e.target.closest('.participante-faixa-item');
+        if (item) item.remove();
+        document.querySelectorAll('.faixa-item h3').forEach((h3, i) => h3.textContent = `Faixa ${i + 1}`);
     }
 });
 
-atualizarInterfaceFaixas();
-containerProdutores.appendChild(criarCardPessoa('produtor'));
-containerMusicos.appendChild(criarCardPessoa('musico'));
-formatoSelect.addEventListener('change', atualizarInterfaceFaixas);
-
-
 // ============================================================================
-// FUNÇÕES DE BANCO (SUPABASE) E GOOGLE DRIVE
+// 4. FUNÇÕES DE UPLOAD (MÉTODO BASE64 - SEM ERRO DE CORS)
 // ============================================================================
-async function obterOuCriarPessoa(dadosPessoa) {
-    const { nome_completo, nome_artistico } = dadosPessoa;
 
-    if (nome_completo && nome_completo.trim() !== '') {
-        const { data, error } = await supabase
-            .from('pessoas')
-            .select('id')
-            .eq('nome_completo', nome_completo.trim())
-            .maybeSingle();
-        if (error) throw error;
-        if (data) return data.id;
-    }
-
-    const { data, error } = await supabase.from('pessoas').insert({
-        nome_completo: nome_completo ? nome_completo.trim() : null,
-        nome_artistico: nome_artistico ? nome_artistico.trim() : null
-    }).select('id').single();
-
-    if (error) throw new Error("Erro ao criar pessoa: " + error.message);
-    return data.id;
-}
-
-async function verificarProjetoDuplicado(nomeProjeto, artistaPrincipal) {
-    const { data } = await supabase.from('projetos').select('id').ilike('nome_projeto', nomeProjeto).ilike('titulo', artistaPrincipal).maybeSingle();
-    return data !== null;
-}
-
-function atualizarProgresso(porcentagem, texto) {
-    document.getElementById('barra-progresso').style.width = `${porcentagem}%`;
-    if (texto) document.getElementById('texto-status').textContent = texto;
-}
-
-async function fazerUploadDrive(arquivo, nomeProjeto, inicioProgressoGeral, fimProgressoGeral) {
+async function fazerUploadDrive(arquivo, nomeProjeto, fimProgresso) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        
-        // Converte o arquivo para Base64 para enviar via Script
-        reader.onload = async function(e) {
+        reader.onload = async (e) => {
             try {
                 const base64Data = e.target.result.split(',')[1];
-                
                 const payload = {
                     fileData: base64Data,
                     fileName: arquivo.name,
@@ -259,187 +185,127 @@ async function fazerUploadDrive(arquivo, nomeProjeto, inicioProgressoGeral, fimP
                     projectName: nomeProjeto
                 };
 
-                // Envia para o seu GAS_URL (O Script do Google)
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error("Erro na comunicação com o Google Script.");
-
+                const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    // Atualiza a barra de progresso para o final deste arquivo
-                    document.getElementById('barra-progresso').style.width = `${fimProgressoGeral}%`;
+                    document.getElementById('barra-progresso').style.width = `${fimProgresso}%`;
                     resolve(result);
                 } else {
                     reject(new Error(result.message));
                 }
-            } catch (err) {
-                reject(err);
-            }
+            } catch (err) { reject(err); }
         };
-
-        reader.onerror = () => reject(new Error("Erro ao ler o arquivo no navegador."));
-        reader.readAsDataURL(arquivo);
+        reader.onerror = () => reject(new Error("Erro ao ler arquivo."));
+        reader.readAsAsDataURL(arquivo);
     });
 }
 
+async function obterOuCriarPessoa(dados) {
+    const { nome_completo, nome_artistico } = dados;
+    if (!nome_completo && !nome_artistico) return null;
+    const busca = (nome_completo || nome_artistico).trim();
+    const { data } = await supabase.from('pessoas').select('id').eq('nome_completo', busca).maybeSingle();
+    if (data) return data.id;
+    const { data: n, error } = await supabase.from('pessoas').insert({ nome_completo: busca, nome_artistico: nome_artistico?.trim() || null }).select('id').single();
+    if (error) throw error;
+    return n.id;
+}
 
 // ============================================================================
-// ENVIO FINAL (SUBMIT)
+// 5. SUBMIT (SALVAMENTO NO SUPABASE)
 // ============================================================================
 document.getElementById('form-artista').addEventListener('submit', async (e) => {
     e.preventDefault();
-    clearTimeout(timerExpiracao);
-
-    const nomeProjeto = document.getElementById('nome-projeto').value.trim();
-    const artistaPrincipal = document.getElementById('artista-principal').value.trim();
-    const btnEnviar = document.getElementById('btn-enviar');
-    btnEnviar.disabled = true;
-
+    const btn = document.getElementById('btn-enviar');
+    btn.disabled = true;
     document.getElementById('area-status').classList.remove('hidden');
-    atualizarProgresso(5, 'Verificando dados...');
 
     try {
-        const jaExiste = await verificarProjetoDuplicado(nomeProjeto, artistaPrincipal);
-        if (jaExiste) throw new Error(`O projeto já existe no sistema.`);
-
+        const nomeProj = document.getElementById('nome-projeto').value.trim();
+        const artista = document.getElementById('artista-principal').value.trim();
+        const linkBackup = document.getElementById('backup-url').value.trim();
         const arquivoCapa = document.getElementById('arquivo-capa').files[0];
-        const faixas = document.querySelectorAll('.faixa-item');
+        const faixasEls = document.querySelectorAll('.faixa-item');
 
-        let temAlgumAudio = false;
-        faixas.forEach(f => {
-            if (f.querySelector('.input-arquivo-faixa').files[0]) temAlgumAudio = true;
-        });
+        const gen = (document.getElementById('genero-projeto').value + ' / ' + document.getElementById('subgenero-projeto').value).trim();
 
-        const dataOculta = new Date();
-        dataOculta.setDate(dataOculta.getDate() + (temAlgumAudio ? 30 : 45));
-
-        atualizarProgresso(10, 'Criando projeto...');
-
-        // === CORREÇÃO: COMBINAR GÊNERO E SUBGÊNERO ===
-        const generoInput = document.getElementById('genero-projeto').value.trim();
-        const subgeneroInput = document.getElementById('subgenero-projeto').value.trim();
-        const generoCombinado = (generoInput + (subgeneroInput ? ' / ' + subgeneroInput : '')).trim() || null;
-
-        const statusGeralVal = (arquivoCapa || temAlgumAudio) ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM';
-
-        // 1. SALVAR PROJETO
-        const { data: projeto, error: erroProj } = await supabase.from('projetos').insert({
-            nome_projeto: nomeProjeto,
-            titulo: artistaPrincipal,
-            feat_projeto: document.getElementById('feat-projeto').value.trim() || null,
+        // 1. Criar Projeto
+        const { data: projeto, error: errP } = await supabase.from('projetos').insert({
+            nome_projeto: nomeProj,
+            titulo: artista,
             formato: formatoSelect.value,
-            spotify_id: document.getElementById('id-spotify').value.trim() || null,
-            apple_music_id: document.getElementById('id-apple').value.trim() || null,
-            genero_subgenero: generoCombinado,
-            backup_url: document.getElementById('backup-url').value.trim() || null,
-            release_texto: document.getElementById('release-projeto').value.trim() || null,
-            data_lancamento: dataOculta.toISOString().split('T')[0],
+            genero_subgenero: gen,
+            release_texto: document.getElementById('release-projeto').value,
+            spotify_id: document.getElementById('id-spotify').value,
+            apple_music_id: document.getElementById('id-apple').value,
+            backup_url: linkBackup || null,
             capa_status: arquivoCapa ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
-            audio_status: temAlgumAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
-            status_geral: statusGeralVal,
-            ja_lancado: false
+            audio_status: 'EM_ANDAMENTO',
+            status_geral: 'EM_ANDAMENTO'
         }).select('id').single();
 
-        if (erroProj) throw erroProj;
-        const projetoId = projeto.id;
+        if (errP) throw errP;
 
-        // 3. SALVAR PRODUTORES E MÚSICOS
+        // 2. Ficha Técnica Geral (Produtores e Músicos)
         const equipe = [...document.querySelectorAll('.produtor-item'), ...document.querySelectorAll('.musico-item')];
-        for (let membro of equipe) {
-            const nc = membro.querySelector('.input-nome-completo').value.trim();
-            const na = membro.querySelector('.input-nome-artistico').value.trim();
-            const papelInput = membro.querySelector('.input-papel-pessoa').value.trim();
-            const tipoPapel = membro.classList.contains('produtor-item') ? 'PRODUTOR_MUSICAL' : 'MUSICO';
-
-            if (nc) {
-                const pessoaId = await obterOuCriarPessoa({ nome_completo: nc, nome_artistico: na });
-                await supabase.from('projeto_participantes').insert({
-                    projeto_id: projetoId,
-                    pessoa_id: pessoaId,
-                    papel: tipoPapel,
-                    instrumento: papelInput
-                });
-            }
+        for (let el of equipe) {
+            const nc = el.querySelector('.input-nome-completo').value;
+            const na = el.querySelector('.input-nome-artistico').value;
+            if (!nc && !na) continue;
+            const pId = await obterOuCriarPessoa({ nome_completo: nc, nome_artistico: na });
+            await supabase.from('projeto_participantes').insert({
+                projeto_id: projeto.id,
+                pessoa_id: pId,
+                papel: el.classList.contains('produtor-item') ? 'PRODUTOR_MUSICAL' : 'MUSICO',
+                instrumento: el.querySelector('.input-papel-pessoa').value
+            });
         }
 
-        let totalArquivosParaUpload = (arquivoCapa ? 1 : 0);
-        faixas.forEach(f => {
-            if (f.querySelector('.input-arquivo-faixa').files[0]) totalArquivosParaUpload++;
-        });
-        let arquivosEnviados = 0;
+        // 3. Upload Capa
+        if (arquivoCapa) await fazerUploadDrive(arquivoCapa, nomeProj, 30);
 
-        if (arquivoCapa) {
-            atualizarProgresso(15, 'Enviando Capa...');
-            let pInicio = 15 + ((arquivosEnviados / totalArquivosParaUpload) * 75);
-            let pFim = 15 + (((arquivosEnviados + 1) / totalArquivosParaUpload) * 75);
-            await fazerUploadDrive(arquivoCapa, nomeProjeto, pInicio, pFim);
-            arquivosEnviados++;
-        }
-
-        for (let i = 0; i < faixas.length; i++) {
-            const f = faixas[i];
-            const titulo = f.querySelector('.input-titulo-faixa').value.trim();
-            const hook = f.querySelector('.input-hook-faixa').value.trim();
-            const letra = f.querySelector('.input-letra-faixa').value.trim();
-            const arquivoAudio = f.querySelector('.input-arquivo-faixa').files[0];
-
-            const { data: faixaSalva, error: erroFaixa } = await supabase.from('faixas').insert({
-                projeto_id: projetoId,
+        // 4. Salvar Faixas e Upload Áudios
+        for (let [i, el] of faixasEls.entries()) {
+            const audio = el.querySelector('.input-arquivo-faixa').files[0];
+            const { data: faixa, error: errF } = await supabase.from('faixas').insert({
+                projeto_id: projeto.id,
                 numero_faixa: i + 1,
-                titulo: titulo,
-                hook_tiktok: hook || null,
-                letra: letra || null,
-                audio_status: arquivoAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM'
+                titulo: el.querySelector('.input-titulo-faixa').value,
+                letra: el.querySelector('.input-letra-faixa').value,
+                audio_status: audio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM'
             }).select('id').single();
 
-            if (erroFaixa) throw erroFaixa;
+            if (errF) throw errF;
 
-            const participantesFaixa = f.querySelectorAll('.participante-faixa-item');
-            for (let pf of participantesFaixa) {
-                const nc = pf.querySelector('.input-nome-completo').value.trim();
-                const na = pf.querySelector('.input-nome-artistico').value.trim();
-                const papelSelecionado = pf.querySelector('.input-papel-participante').value;
-
-                if (nc) {
-                    const pessoaId = await obterOuCriarPessoa({ nome_completo: nc, nome_artistico: na });
-                    await supabase.from('projeto_participantes').insert({
-                        projeto_id: projetoId,
-                        faixa_id: faixaSalva.id,
-                        pessoa_id: pessoaId,
-                        papel: papelSelecionado
-                    });
-                }
+            // Participantes da Faixa
+            const parts = el.querySelectorAll('.participante-faixa-item');
+            for (let pEl of parts) {
+                const nc = pEl.querySelector('.input-nome-completo').value;
+                const na = pEl.querySelector('.input-nome-artistico').value;
+                if (!nc && !na) continue;
+                const pId = await obterOuCriarPessoa({ nome_completo: nc, nome_artistico: na });
+                await supabase.from('projeto_participantes').insert({
+                    projeto_id: projeto.id,
+                    faixa_id: faixa.id,
+                    pessoa_id: pId,
+                    papel: pEl.querySelector('.input-papel-participante').value
+                });
             }
 
-            if (arquivoAudio) {
-                atualizarProgresso(15, `Enviando áudio: ${titulo}...`);
-                let pInicio = 15 + ((arquivosEnviados / totalArquivosParaUpload) * 75);
-                let pFim = 15 + (((arquivosEnviados + 1) / totalArquivosParaUpload) * 75);
-                await fazerUploadDrive(arquivoAudio, nomeProjeto, pInicio, pFim);
-                arquivosEnviados++;
+            // Upload do Áudio (Apenas se existir arquivo anexado)
+            if (audio) {
+                const progresso = 30 + ((i + 1) / faixasEls.length) * 70;
+                await fazerUploadDrive(audio, nomeProj, progresso);
             }
         }
 
-        atualizarProgresso(100, 'Tudo salvo com sucesso! 🎉');
-        document.getElementById('barra-progresso').classList.replace('bg-indigo-500', 'bg-emerald-500');
-
-        setTimeout(() => {
-            alert("Lançamento enviado com sucesso!");
-            window.location.reload();
-        }, 2000);
-
-    } catch (erro) {
-        console.error(erro);
-        document.getElementById('area-status').classList.remove('hidden');
-        atualizarProgresso(100, 'Ocorreu um erro.');
-        document.getElementById('barra-progresso').classList.replace('bg-indigo-500', 'bg-red-500');
-        alert("Falha: " + erro.message);
+        alert('Lançamento enviado com sucesso! 🎉');
+        window.location.reload();
+    } catch (err) {
+        alert('Erro: ' + err.message);
+        console.error(err);
     } finally {
-        document.getElementById('btn-enviar').disabled = false;
-        timerExpiracao = setTimeout(encerrarSessao, TEMPO_SESSAO_MS);
+        btn.disabled = false;
     }
 });
