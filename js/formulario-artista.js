@@ -3,12 +3,12 @@ import { supabase } from './supabase-config.js';
 // ============================================================================
 // 1. CONFIGURAÇÕES (Certifique-se de que o GAS_URL é o da NOVA IMPLANTAÇÃO)
 // ============================================================================
-const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com"; 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyvSCokiSJTKgO7utbmw5kfpfZuf8LUa22SDoFqnDgfgDR9Bv3Z8Zic45y0oY2M3_Yk/exec"; 
-const TEMPO_SESSAO_MS = 30 * 60 * 1000; 
+const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyvSCokiSJTKgO7utbmw5kfpfZuf8LUa22SDoFqnDgfgDR9Bv3Z8Zic45y0oY2M3_Yk/exec";
+const TEMPO_SESSAO_MS = 30 * 60 * 1000;
 
 let timerExpiracao;
-let googleInicializado = false; 
+let googleInicializado = false;
 
 // Elementos do DOM
 const telaLogin = document.getElementById('tela-login');
@@ -37,7 +37,7 @@ function carregarBotaoGoogle() {
         });
         google.accounts.id.renderButton(
             document.getElementById("buttonDiv"),
-            { theme: "outline", size: "large", text: "continue_with", width: 280 } 
+            { theme: "outline", size: "large", text: "continue_with", width: 280 }
         );
         googleInicializado = true;
     }
@@ -171,7 +171,6 @@ document.addEventListener('click', (e) => {
 // ============================================================================
 // 4. FUNÇÕES DE UPLOAD (MÉTODO BASE64 - SEM ERRO DE CORS)
 // ============================================================================
-
 async function fazerUploadDrive(arquivo, nomeProjeto, fimProgresso) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -185,11 +184,11 @@ async function fazerUploadDrive(arquivo, nomeProjeto, fimProgresso) {
                     projectName: nomeProjeto
                 };
 
-                const response = await fetch(GAS_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify(payload) 
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
                 });
-                
+
                 const result = await response.json();
 
                 if (result.status === "success") {
@@ -199,17 +198,18 @@ async function fazerUploadDrive(arquivo, nomeProjeto, fimProgresso) {
                 } else {
                     reject(new Error(result.message));
                 }
-            } catch (err) { 
-                reject(err); 
+            } catch (err) {
+                reject(err);
             }
         };
         reader.onerror = () => reject(new Error("Erro ao ler arquivo."));
-        
-        // Linha corrigida abaixo:
         reader.readAsDataURL(arquivo);
     });
 }
 
+// ============================================================================
+// 5. FUNÇÕES AUXILIARES DE STATUS E DATAS
+// ============================================================================
 async function obterOuCriarPessoa(dados) {
     const { nome_completo, nome_artistico } = dados;
     if (!nome_completo && !nome_artistico) return null;
@@ -221,8 +221,19 @@ async function obterOuCriarPessoa(dados) {
     return n.id;
 }
 
+function calcularDataLancamento(teveUploadAudio) {
+    const hoje = new Date();
+    const dias = teveUploadAudio ? 30 : 50;
+    hoje.setDate(hoje.getDate() + dias);
+    return hoje.toISOString().split('T')[0]; // formato YYYY-MM-DD
+}
+
+function calcularStatusGeral(teveCapaUpload, teveAudioUpload) {
+    return (teveCapaUpload || teveAudioUpload) ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM';
+}
+
 // ============================================================================
-// 5. SUBMIT (SALVAMENTO NO SUPABASE)
+// 6. SUBMIT (SALVAMENTO NO SUPABASE)
 // ============================================================================
 document.getElementById('form-artista').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -237,6 +248,17 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         const arquivoCapa = document.getElementById('arquivo-capa').files[0];
         const faixasEls = document.querySelectorAll('.faixa-item');
 
+        // Verifica se houve upload de áudio em alguma faixa
+        const houveUploadAudio = Array.from(faixasEls).some(el => el.querySelector('.input-arquivo-faixa').files.length > 0);
+        const houveUploadCapa = !!arquivoCapa;
+
+        // Data de lançamento baseada na existência de áudio
+        const dataLancamento = calcularDataLancamento(houveUploadAudio);
+
+        // Status geral inicial
+        const statusGeral = calcularStatusGeral(houveUploadCapa, houveUploadAudio);
+
+        // Gênero/subgênero
         const gen = (document.getElementById('genero-projeto').value + ' / ' + document.getElementById('subgenero-projeto').value).trim();
 
         // 1. Criar Projeto
@@ -249,9 +271,10 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             spotify_id: document.getElementById('id-spotify').value,
             apple_music_id: document.getElementById('id-apple').value,
             backup_url: linkBackup || null,
-            capa_status: arquivoCapa ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
-            audio_status: 'EM_ANDAMENTO',
-            status_geral: 'EM_ANDAMENTO'
+            data_lancamento: dataLancamento,
+            capa_status: houveUploadCapa ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
+            audio_status: houveUploadAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
+            status_geral: statusGeral
         }).select('id').single();
 
         if (errP) throw errP;
@@ -271,18 +294,28 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             });
         }
 
-        // 3. Upload Capa
-        if (arquivoCapa) await fazerUploadDrive(arquivoCapa, nomeProj, 30);
+        // 3. Upload da Capa (se houver)
+        if (arquivoCapa) {
+            await fazerUploadDrive(arquivoCapa, nomeProj, 30);
+            const agora = new Date().toISOString();
+            await supabase.from('projetos').update({
+                capa_status: 'CONCLUIDO',
+                capa_data_inicio: agora,
+                capa_data_conclusao: agora
+            }).eq('id', projeto.id);
+        }
 
-        // 4. Salvar Faixas e Upload Áudios
+        // 4. Salvar Faixas e Upload dos Áudios
         for (let [i, el] of faixasEls.entries()) {
-            const audio = el.querySelector('.input-arquivo-faixa').files[0];
+            const audioFile = el.querySelector('.input-arquivo-faixa').files[0];
+            const audioStatus = audioFile ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM';
+
             const { data: faixa, error: errF } = await supabase.from('faixas').insert({
                 projeto_id: projeto.id,
                 numero_faixa: i + 1,
                 titulo: el.querySelector('.input-titulo-faixa').value,
                 letra: el.querySelector('.input-letra-faixa').value,
-                audio_status: audio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM'
+                audio_status: audioStatus
             }).select('id').single();
 
             if (errF) throw errF;
@@ -302,12 +335,38 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                 });
             }
 
-            // Upload do Áudio (Apenas se existir arquivo anexado)
-            if (audio) {
+            // Upload do Áudio (se houver)
+            if (audioFile) {
                 const progresso = 30 + ((i + 1) / faixasEls.length) * 70;
-                await fazerUploadDrive(audio, nomeProj, progresso);
+                await fazerUploadDrive(audioFile, nomeProj, progresso);
+                const agora = new Date().toISOString();
+                await supabase.from('faixas').update({
+                    audio_status: 'CONCLUIDO',
+                    audio_data_inicio: agora,
+                    audio_data_conclusao: agora
+                }).eq('id', faixa.id);
             }
         }
+
+        // 5. Atualizar status geral do projeto (áudio) após todos os uploads
+        // Buscar todas as faixas novamente para verificar status consolidado
+        const { data: faixasDoProjeto, error: buscaErr } = await supabase
+            .from('faixas')
+            .select('audio_status')
+            .eq('projeto_id', projeto.id);
+        if (buscaErr) throw buscaErr;
+
+        const statuses = faixasDoProjeto.map(f => f.audio_status);
+        const audioStatusProjeto = statuses.length > 0 && statuses.every(s => s === 'CONCLUIDO') ? 'CONCLUIDO' :
+                                   statuses.some(s => s === 'EM_ANDAMENTO' || s === 'CONCLUIDO') ? 'EM_ANDAMENTO' :
+                                   'AINDA_NAO_TEM';
+
+        // Atualizar projeto com o status consolidado de áudio
+        const { error: updateErr } = await supabase
+            .from('projetos')
+            .update({ audio_status: audioStatusProjeto })
+            .eq('id', projeto.id);
+        if (updateErr) throw updateErr;
 
         alert('Lançamento enviado com sucesso! 🎉');
         window.location.reload();
