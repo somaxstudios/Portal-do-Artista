@@ -4,7 +4,7 @@ import { supabase } from './supabase-config.js';
 // 1. CONFIGURAÇÕES (Certifique-se de que o GAS_URL é o da NOVA IMPLANTAÇÃO)
 // ============================================================================
 const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com";
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyvSCokiSJTKgO7utbmw5kfpfZuf8LUa22SDoFqnDgfgDR9Bv3Z8Zic45y0oY2M3_Yk/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzkevlfKYBEMGICxcnqzPKeiov1gP30opUfwH0tp0FdxEVQVG0iOOgj6vyLrxDYMJIN/exec";
 const TEMPO_SESSAO_MS = 30 * 60 * 1000;
 
 let timerExpiracao;
@@ -318,7 +318,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
 
         // 3. Upload da Capa (se houver)
         if (arquivoCapa) {
-            await fazerUploadDrive(arquivoCapa, nomeProj, 30);
+            await fazerUploadDrive(arquivoCapa, nomeProj, 0, 30); // progressoBase=0, range=30
             const agora = new Date().toISOString();
             await supabase.from('projetos').update({
                 capa_status: 'CONCLUIDO',
@@ -359,8 +359,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
 
             // Upload do Áudio (se houver)
             if (audioFile) {
-                const progresso = 30 + ((i + 1) / faixasEls.length) * 70;
-                await fazerUploadDrive(audioFile, nomeProj, progresso);
+                await fazerUploadDrive(audioFile, nomeProj, 30, 70); // base=30, range=70
                 const agora = new Date().toISOString();
                 await supabase.from('faixas').update({
                     audio_status: 'CONCLUIDO',
@@ -368,7 +367,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                     audio_data_conclusao: agora
                 }).eq('id', faixa.id);
             }
-        }
 
         // 5. Atualizar status geral do projeto (áudio) após todos os uploads
         // Buscar todas as faixas novamente para verificar status consolidado
