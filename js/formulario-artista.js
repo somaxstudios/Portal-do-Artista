@@ -78,31 +78,21 @@ function mostrarTelaLogin() {
 window.onload = () => {
     setTimeout(verificarSessao, 500);
     atualizarInterfaceFaixas();
-    // Adiciona uma linha inicial na ficha técnica se estiver vazio
     if (containerProdutores.children.length === 0) document.getElementById('btn-add-produtor').click();
     if (containerMusicos.children.length === 0) document.getElementById('btn-add-musico').click();
 };
 
 // ============================================================================
-// 3. LÓGICA DE INTERFACE (PESSOAS E FAIXAS)
+// 3. LÓGICA DE INTERFACE
 // ============================================================================
-
-// Função para controlar visibilidade dos campos de upload de áudio e do aviso
 function toggleAudioUploadFields() {
     const isSingle = formatoSelect.value === 'SINGLE';
     const audioInputs = document.querySelectorAll('.audio-file-container');
     const avisoMassa = document.getElementById('aviso-upload-massa');
-    
-    audioInputs.forEach(container => {
-        container.classList.toggle('hidden', !isSingle);
-    });
-    
-    if (avisoMassa) {
-        avisoMassa.classList.toggle('hidden', isSingle);
-    }
+    audioInputs.forEach(container => container.classList.toggle('hidden', !isSingle));
+    if (avisoMassa) avisoMassa.classList.toggle('hidden', isSingle);
 }
 
-// Criação de Participantes da Faixa (Autores, Interpretes, Feats)
 function criarParticipanteFaixa() {
     const div = document.createElement('div');
     div.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 bg-zinc-950/40 p-3 rounded-lg border border-zinc-700/30 participante-faixa-item mt-2';
@@ -173,7 +163,6 @@ function criarCardPessoa(tipo) {
     return div;
 }
 
-// Listeners de Interface
 formatoSelect.addEventListener('change', atualizarInterfaceFaixas);
 document.getElementById('btn-add-faixa').addEventListener('click', () => containerFaixas.appendChild(criarCardFaixa(containerFaixas.querySelectorAll('.faixa-item').length + 1)));
 document.getElementById('btn-add-produtor').addEventListener('click', () => containerProdutores.appendChild(criarCardPessoa('produtor')));
@@ -191,10 +180,10 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================================
-// 4. FUNÇÕES DE UPLOAD (CHUNKED)
+// 4. UPLOAD EM PARTES
 // ============================================================================
 async function fazerUploadDrive(arquivo, nomeProjeto, progressoBase, progressoRange) {
-    const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
+    const CHUNK_SIZE = 5 * 1024 * 1024;
     const totalChunks = Math.ceil(arquivo.size / CHUNK_SIZE);
 
     const readChunk = (start, end) => {
@@ -243,7 +232,7 @@ async function fazerUploadDrive(arquivo, nomeProjeto, progressoBase, progressoRa
 }
 
 // ============================================================================
-// 5. FUNÇÕES AUXILIARES DE STATUS E DATAS
+// 5. FUNÇÕES AUXILIARES
 // ============================================================================
 async function obterOuCriarPessoa(dados) {
     const { nome_completo, nome_artistico } = dados;
@@ -268,7 +257,7 @@ function calcularStatusGeral(teveCapaUpload, teveAudioUpload) {
 }
 
 // ============================================================================
-// 6. SUBMIT (SALVAMENTO NO SUPABASE)
+// 6. SUBMIT
 // ============================================================================
 document.getElementById('form-artista').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -285,7 +274,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         const formato = formatoSelect.value;
         const isSingle = formato === 'SINGLE';
 
-        // Verifica se houve upload de áudio (apenas se SINGLE)
         const houveUploadAudio = isSingle ? Array.from(faixasEls).some(el => el.querySelector('.input-arquivo-faixa').files.length > 0) : false;
         const houveUploadCapa = !!arquivoCapa;
 
@@ -305,12 +293,12 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             backup_url: linkBackup || null,
             data_lancamento: dataLancamento,
             capa_status: houveUploadCapa ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
-            audio_status: isSingle ? (houveUploadAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM') : 'AGUARDANDO_UPLOAD',
+            audio_status: isSingle ? (houveUploadAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM') : 'EM_ANDAMENTO',
             status_geral: statusGeral
         }).select('id').single();
         if (errP) throw errP;
 
-        // 2. Ficha Técnica (produtores e músicos)
+        // 2. Ficha Técnica
         const equipe = [...document.querySelectorAll('.produtor-item'), ...document.querySelectorAll('.musico-item')];
         for (let el of equipe) {
             const nc = el.querySelector('.input-nome-completo').value;
@@ -325,7 +313,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             });
         }
 
-        // 3. Upload da Capa (se houver)
+        // 3. Upload da Capa
         if (arquivoCapa) {
             await fazerUploadDrive(arquivoCapa, nomeProj, 0, 30);
             const agora = new Date().toISOString();
@@ -336,10 +324,10 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }).eq('id', projeto.id);
         }
 
-        // 4. Salvar Faixas (e upload dos áudios apenas se SINGLE)
+        // 4. Salvar Faixas e upload dos áudios (se SINGLE)
         for (let [i, el] of faixasEls.entries()) {
             const audioFile = isSingle ? el.querySelector('.input-arquivo-faixa').files[0] : null;
-            const audioStatus = isSingle ? (audioFile ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM') : 'AGUARDANDO_UPLOAD';
+            const audioStatus = isSingle ? (audioFile ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM') : 'EM_ANDAMENTO';
 
             const { data: faixa, error: errF } = await supabase.from('faixas').insert({
                 projeto_id: projeto.id,
@@ -350,7 +338,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }).select('id').single();
             if (errF) throw errF;
 
-            // Participantes da Faixa
             const parts = el.querySelectorAll('.participante-faixa-item');
             for (let pEl of parts) {
                 const nc = pEl.querySelector('.input-nome-completo').value;
@@ -365,7 +352,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                 });
             }
 
-            // Upload do Áudio (apenas se SINGLE e houver arquivo)
             if (isSingle && audioFile) {
                 const progresso = 30 + ((i + 1) / faixasEls.length) * 70;
                 await fazerUploadDrive(audioFile, nomeProj, 30, 70);
@@ -378,7 +364,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }
         }
 
-        // 5. Atualizar status geral do áudio do projeto (apenas se SINGLE)
+        // 5. Atualizar status do projeto (apenas SINGLE)
         if (isSingle) {
             const { data: faixasDoProjeto, error: buscaErr } = await supabase
                 .from('faixas')
@@ -392,7 +378,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             await supabase.from('projetos').update({ audio_status: audioStatusProjeto }).eq('id', projeto.id);
         }
 
-        // Após tudo salvo, redirecionar se for EP/ÁLBUM
+        // Redirecionar para o Google Forms se for EP/ÁLBUM
         if (!isSingle) {
             const formsUrl = `${GOOGLE_FORMS_URL}&${FORMS_ENTRY_ID}=${projeto.id}`;
             window.location.href = formsUrl;
