@@ -31,7 +31,6 @@
 </head>
 <body class="text-zinc-300 min-h-screen pb-12 font-sans selection:bg-indigo-500 selection:text-white">
 
-    <!-- TELA DE LOGIN PERSONALIZADA -->
     <div id="tela-login" class="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-md px-2">
         <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl">
             <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -48,7 +47,6 @@
         </div>
     </div>
 
-    <!-- CONTEÚDO PRINCIPAL (oculto até login) -->
     <main class="w-full max-w-3xl mx-auto px-2 sm:px-4 hidden" id="main-content">
         <div class="text-center mt-6 mb-8">
             <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">📋 Envio de Lançamento</h1>
@@ -59,7 +57,6 @@
 
         <form id="form-artista" class="space-y-6 sm:space-y-8">
             
-            <!-- INFORMAÇÕES GERAIS -->
             <div class="glass-panel p-4 sm:p-6 rounded-2xl shadow-xl">
                 <h2 class="font-bold text-lg text-white mb-4 sm:mb-5 flex items-center gap-2">
                     <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">1</span> 
@@ -121,7 +118,6 @@
                 </div>
             </div>
 
-            <!-- ARQUIVOS E MÍDIA -->
             <div class="glass-panel p-4 sm:p-6 rounded-2xl shadow-xl">
                 <h2 class="font-bold text-lg text-white mb-4 sm:mb-5 flex items-center gap-2">
                     <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">2</span> 
@@ -147,7 +143,6 @@
                 </div>
             </div>
 
-            <!-- FAIXAS -->
             <div class="glass-panel p-4 sm:p-6 rounded-2xl shadow-xl">
                 <div class="flex justify-between items-center mb-4 sm:mb-5">
                     <h2 class="font-bold text-lg text-white flex items-center gap-2">
@@ -157,18 +152,16 @@
                     <button type="button" id="btn-add-faixa" class="hidden text-[10px] sm:text-xs bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded-lg font-bold transition border border-zinc-700"> + Adicionar Faixa</button>
                 </div>
 
-                <div class="mb-5 bg-indigo-500/10 border border-indigo-500/30 p-3 rounded-xl">
-                    <p class="text-[10px] sm:text-xs text-indigo-200 leading-relaxed">
-                        Para <strong>EP ou Álbum</strong>, você não precisa anexar os áudios um por um abaixo se tiver fornecido o link do Drive na seção anterior. Basta preencher os títulos das faixas.
+                <div id="aviso-upload-massa" class="hidden mb-4 bg-blue-500/10 border border-blue-500/30 p-3 rounded-xl">
+                    <p class="text-xs text-blue-200 leading-relaxed">
+                        <strong>📦 Upload em massa:</strong> Para projetos do tipo EP ou Álbum, você fará o upload dos arquivos de áudio (WAV) em uma etapa separada, após preencher este formulário. Basta clicar no botão "Finalizar" e você será redirecionado.
                     </p>
                 </div>
-                
+
                 <div id="container-faixas" class="space-y-4 sm:space-y-6">
-                    <!-- As faixas serão inseridas dinamicamente via JS -->
-                </div>
+                    </div>
             </div>
 
-            <!-- FICHA TÉCNICA -->
             <div class="glass-panel p-4 sm:p-6 rounded-2xl shadow-xl">
                 <h2 class="font-bold text-lg text-white mb-5 sm:mb-6 flex items-center gap-2 border-b border-zinc-700/50 pb-4">
                     <span class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">4</span> 
@@ -192,14 +185,12 @@
                 </div>
             </div>
 
-            <!-- BOTÃO DE ENVIO -->
             <div class="pt-2 pb-12">
                 <button type="submit" id="btn-enviar" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition active:scale-95 text-base sm:text-lg">
                     Finalizar e Enviar Lançamento
                 </button>
             </div>
 
-            <!-- BARRA DE PROGRESSO -->
             <div id="area-status" class="hidden fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] sm:w-[calc(100%-2rem)] max-w-md glass-panel p-4 sm:p-5 rounded-2xl shadow-2xl z-50">
                 <p id="texto-status" class="text-xs sm:text-sm font-bold text-white mb-2 sm:mb-3 text-center">Analisando projeto...</p>
                 <div class="w-full bg-zinc-800 rounded-full h-2 mb-1 overflow-hidden">
