@@ -380,7 +380,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
 
         // Redirecionar para o Google Forms se for EP/ÁLBUM
         if (!isSingle) {
-            const formsUrl = `${GOOGLE_FORMS_URL}&${FORMS_ENTRY_ID}=${projeto.id}`;
+            const formsUrl = `${GOOGLE_FORMS_URL}&${FORMS_ENTRY_ID}=${encodeURIComponent(nomeProj)}`;
             window.location.href = formsUrl;
         } else {
             alert('Lançamento enviado com sucesso! 🎉');
