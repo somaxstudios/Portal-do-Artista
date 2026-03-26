@@ -1,11 +1,15 @@
 import { supabase } from './supabase-config.js';
 
 // ============================================================================
-// 1. CONFIGURAÇÕES (Certifique-se de que o GAS_URL é o da NOVA IMPLANTAÇÃO)
+// 1. CONFIGURAÇÕES
 // ============================================================================
 const GOOGLE_CLIENT_ID = "130491079643-5sp71k2uuugqo9i87g9nrk622u6t6v7f.apps.googleusercontent.com";
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzkevlfKYBEMGICxcnqzPKeiov1gP30opUfwH0tp0FdxEVQVG0iOOgj6vyLrxDYMJIN/exec";
 const TEMPO_SESSAO_MS = 30 * 60 * 1000;
+
+// URL do Google Forms para upload em massa
+const GOOGLE_FORMS_URL = "https://docs.google.com/forms/d/e/1FAIpQLSe4iNNJnqX9AQ6OGgQp2WrIv8JEQ9yzTQ_w30oNRgpDEDE-OA/viewform?usp=pp_url";
+const FORMS_ENTRY_ID = "entry.58717963";
 
 let timerExpiracao;
 let googleInicializado = false;
@@ -83,6 +87,21 @@ window.onload = () => {
 // 3. LÓGICA DE INTERFACE (PESSOAS E FAIXAS)
 // ============================================================================
 
+// Função para controlar visibilidade dos campos de upload de áudio e do aviso
+function toggleAudioUploadFields() {
+    const isSingle = formatoSelect.value === 'SINGLE';
+    const audioInputs = document.querySelectorAll('.audio-file-container');
+    const avisoMassa = document.getElementById('aviso-upload-massa');
+    
+    audioInputs.forEach(container => {
+        container.classList.toggle('hidden', !isSingle);
+    });
+    
+    if (avisoMassa) {
+        avisoMassa.classList.toggle('hidden', isSingle);
+    }
+}
+
 // Criação de Participantes da Faixa (Autores, Interpretes, Feats)
 function criarParticipanteFaixa() {
     const div = document.createElement('div');
@@ -113,8 +132,10 @@ function criarCardFaixa(index) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label class="block text-xs font-semibold text-zinc-400 mb-1">Título da Música</label>
             <input type="text" required class="input-titulo-faixa input-dark w-full px-4 py-2 rounded-xl"></div>
-            <div><label class="block text-xs font-semibold text-zinc-400 mb-1">Arquivo (Opcional se usar Link)</label>
-            <input type="file" accept="audio/*" class="input-arquivo-faixa w-full text-xs text-zinc-400 file:mr-2 file:py-2 file:px-3 file:bg-indigo-500/20 file:text-indigo-300 file:border-0 file:rounded-lg"></div>
+            <div class="audio-file-container">
+                <label class="block text-xs font-semibold text-zinc-400 mb-1">Arquivo (Opcional se usar Link)</label>
+                <input type="file" accept="audio/*" class="input-arquivo-faixa w-full text-xs text-zinc-400 file:mr-2 file:py-2 file:px-3 file:bg-indigo-500/20 file:text-indigo-300 file:border-0 file:rounded-lg">
+            </div>
         </div>
         <div class="bg-zinc-800/30 p-3 rounded-xl border border-zinc-700/30">
             <div class="flex justify-between items-center mb-2"><label class="text-xs font-bold text-zinc-300">CRÉDITOS DA FAIXA</label>
@@ -136,6 +157,7 @@ function atualizarInterfaceFaixas() {
     } else {
         btnAddFaixa.classList.remove('hidden');
     }
+    toggleAudioUploadFields();
 }
 
 function criarCardPessoa(tipo) {
@@ -169,30 +191,22 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================================
-// 4. FUNÇÕES DE UPLOAD (MÉTODO BASE64 - SEM ERRO DE CORS)
-// ============================================================================
-// ============================================================================
-// FUNÇÃO DE UPLOAD EM PARTES (CHUNKED)
+// 4. FUNÇÕES DE UPLOAD (CHUNKED)
 // ============================================================================
 async function fazerUploadDrive(arquivo, nomeProjeto, progressoBase, progressoRange) {
-    // progressoBase: percentual já alcançado antes do upload (ex: 30)
-    // progressoRange: percentual que este upload representa (ex: 70)
     const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
     const totalChunks = Math.ceil(arquivo.size / CHUNK_SIZE);
-    let chunkIndex = 0;
 
-    // Função para ler um bloco e retornar base64
     const readChunk = (start, end) => {
         return new Promise((resolve, reject) => {
             const blob = arquivo.slice(start, end);
             const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result.split(',')[1]); // base64 sem prefixo
+            reader.onload = (e) => resolve(e.target.result.split(',')[1]);
             reader.onerror = reject;
             reader.readAsDataURL(blob);
         });
     };
 
-    // Envia cada bloco sequencialmente
     for (let i = 0; i < totalChunks; i++) {
         const start = i * CHUNK_SIZE;
         const end = Math.min(start + CHUNK_SIZE, arquivo.size);
@@ -222,7 +236,6 @@ async function fazerUploadDrive(arquivo, nomeProjeto, progressoBase, progressoRa
             throw new Error(`Erro no servidor ao enviar bloco ${i}: ${result.message || 'desconhecido'}`);
         }
 
-        // Atualiza a barra de progresso: base + (i+1)/totalChunks * range
         const progresso = progressoBase + ((i + 1) / totalChunks) * progressoRange;
         const barra = document.getElementById('barra-progresso');
         if (barra) barra.style.width = `${progresso}%`;
@@ -247,7 +260,7 @@ function calcularDataLancamento(teveUploadAudio) {
     const hoje = new Date();
     const dias = teveUploadAudio ? 30 : 50;
     hoje.setDate(hoje.getDate() + dias);
-    return hoje.toISOString().split('T')[0]; // formato YYYY-MM-DD
+    return hoje.toISOString().split('T')[0];
 }
 
 function calcularStatusGeral(teveCapaUpload, teveAudioUpload) {
@@ -269,25 +282,22 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
         const linkBackup = document.getElementById('backup-url').value.trim();
         const arquivoCapa = document.getElementById('arquivo-capa').files[0];
         const faixasEls = document.querySelectorAll('.faixa-item');
+        const formato = formatoSelect.value;
+        const isSingle = formato === 'SINGLE';
 
-        // Verifica se houve upload de áudio em alguma faixa
-        const houveUploadAudio = Array.from(faixasEls).some(el => el.querySelector('.input-arquivo-faixa').files.length > 0);
+        // Verifica se houve upload de áudio (apenas se SINGLE)
+        const houveUploadAudio = isSingle ? Array.from(faixasEls).some(el => el.querySelector('.input-arquivo-faixa').files.length > 0) : false;
         const houveUploadCapa = !!arquivoCapa;
 
-        // Data de lançamento baseada na existência de áudio
         const dataLancamento = calcularDataLancamento(houveUploadAudio);
-
-        // Status geral inicial
         const statusGeral = calcularStatusGeral(houveUploadCapa, houveUploadAudio);
-
-        // Gênero/subgênero
         const gen = (document.getElementById('genero-projeto').value + ' / ' + document.getElementById('subgenero-projeto').value).trim();
 
         // 1. Criar Projeto
         const { data: projeto, error: errP } = await supabase.from('projetos').insert({
             nome_projeto: nomeProj,
             titulo: artista,
-            formato: formatoSelect.value,
+            formato: formato,
             genero_subgenero: gen,
             release_texto: document.getElementById('release-projeto').value,
             spotify_id: document.getElementById('id-spotify').value,
@@ -295,13 +305,12 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             backup_url: linkBackup || null,
             data_lancamento: dataLancamento,
             capa_status: houveUploadCapa ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
-            audio_status: houveUploadAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM',
+            audio_status: isSingle ? (houveUploadAudio ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM') : 'AGUARDANDO_UPLOAD',
             status_geral: statusGeral
         }).select('id').single();
-
         if (errP) throw errP;
 
-        // 2. Ficha Técnica Geral (Produtores e Músicos)
+        // 2. Ficha Técnica (produtores e músicos)
         const equipe = [...document.querySelectorAll('.produtor-item'), ...document.querySelectorAll('.musico-item')];
         for (let el of equipe) {
             const nc = el.querySelector('.input-nome-completo').value;
@@ -318,7 +327,7 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
 
         // 3. Upload da Capa (se houver)
         if (arquivoCapa) {
-            await fazerUploadDrive(arquivoCapa, nomeProj, 0, 30); // progressoBase=0, range=30
+            await fazerUploadDrive(arquivoCapa, nomeProj, 0, 30);
             const agora = new Date().toISOString();
             await supabase.from('projetos').update({
                 capa_status: 'CONCLUIDO',
@@ -327,10 +336,10 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
             }).eq('id', projeto.id);
         }
 
-        // 4. Salvar Faixas e Upload dos Áudios
+        // 4. Salvar Faixas (e upload dos áudios apenas se SINGLE)
         for (let [i, el] of faixasEls.entries()) {
-            const audioFile = el.querySelector('.input-arquivo-faixa').files[0];
-            const audioStatus = audioFile ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM';
+            const audioFile = isSingle ? el.querySelector('.input-arquivo-faixa').files[0] : null;
+            const audioStatus = isSingle ? (audioFile ? 'EM_ANDAMENTO' : 'AINDA_NAO_TEM') : 'AGUARDANDO_UPLOAD';
 
             const { data: faixa, error: errF } = await supabase.from('faixas').insert({
                 projeto_id: projeto.id,
@@ -339,7 +348,6 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                 letra: el.querySelector('.input-letra-faixa').value,
                 audio_status: audioStatus
             }).select('id').single();
-
             if (errF) throw errF;
 
             // Participantes da Faixa
@@ -357,9 +365,10 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                 });
             }
 
-            // Upload do Áudio (se houver)
-            if (audioFile) {
-                await fazerUploadDrive(audioFile, nomeProj, 30, 70); // base=30, range=70
+            // Upload do Áudio (apenas se SINGLE e houver arquivo)
+            if (isSingle && audioFile) {
+                const progresso = 30 + ((i + 1) / faixasEls.length) * 70;
+                await fazerUploadDrive(audioFile, nomeProj, 30, 70);
                 const agora = new Date().toISOString();
                 await supabase.from('faixas').update({
                     audio_status: 'CONCLUIDO',
@@ -367,29 +376,30 @@ document.getElementById('form-artista').addEventListener('submit', async (e) => 
                     audio_data_conclusao: agora
                 }).eq('id', faixa.id);
             }
-        } // Fim do for de faixas
+        }
 
-        // 5. Atualizar status geral do projeto (áudio) após todos os uploads
-        const { data: faixasDoProjeto, error: buscaErr } = await supabase
-            .from('faixas')
-            .select('audio_status')
-            .eq('projeto_id', projeto.id);
-        if (buscaErr) throw buscaErr;
+        // 5. Atualizar status geral do áudio do projeto (apenas se SINGLE)
+        if (isSingle) {
+            const { data: faixasDoProjeto, error: buscaErr } = await supabase
+                .from('faixas')
+                .select('audio_status')
+                .eq('projeto_id', projeto.id);
+            if (buscaErr) throw buscaErr;
+            const statuses = faixasDoProjeto.map(f => f.audio_status);
+            const audioStatusProjeto = statuses.length > 0 && statuses.every(s => s === 'CONCLUIDO') ? 'CONCLUIDO' :
+                                       statuses.some(s => s === 'EM_ANDAMENTO' || s === 'CONCLUIDO') ? 'EM_ANDAMENTO' :
+                                       'AINDA_NAO_TEM';
+            await supabase.from('projetos').update({ audio_status: audioStatusProjeto }).eq('id', projeto.id);
+        }
 
-        const statuses = faixasDoProjeto.map(f => f.audio_status);
-        const audioStatusProjeto = statuses.length > 0 && statuses.every(s => s === 'CONCLUIDO') ? 'CONCLUIDO' :
-                                   statuses.some(s => s === 'EM_ANDAMENTO' || s === 'CONCLUIDO') ? 'EM_ANDAMENTO' :
-                                   'AINDA_NAO_TEM';
-
-        const { error: updateErr } = await supabase
-            .from('projetos')
-            .update({ audio_status: audioStatusProjeto })
-            .eq('id', projeto.id);
-        if (updateErr) throw updateErr;
-
-        alert('Lançamento enviado com sucesso! 🎉');
-        window.location.reload();
-
+        // Após tudo salvo, redirecionar se for EP/ÁLBUM
+        if (!isSingle) {
+            const formsUrl = `${GOOGLE_FORMS_URL}&${FORMS_ENTRY_ID}=${projeto.id}`;
+            window.location.href = formsUrl;
+        } else {
+            alert('Lançamento enviado com sucesso! 🎉');
+            window.location.reload();
+        }
     } catch (err) {
         alert('Erro: ' + err.message);
         console.error(err);
